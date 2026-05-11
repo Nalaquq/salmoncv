@@ -131,3 +131,9 @@ Usage:
 - Auto mode: `salmoncv-lights`
 - Custom: `salmoncv-lights --on-time 20:00 --off-time 06:30`
 - Test: `salmoncv-lights --dry-run`
+
+---
+
+**User**: Lights command printed "Lights ON" but the lights didn't actually turn on.
+
+**Claude**: The issue was `gpiozero` — it resets GPIO pins when the process exits, so the relay turned on for a split second then immediately turned off. Rewrote `power.py` to use `pinctrl` (built into Pi 5) which sets GPIO state permanently — it persists after the process exits. Also updated `lights.py` to reuse `lights_on()`/`lights_off()` from `power.py` instead of managing GPIO directly. Removed `gpiozero` from project dependencies.

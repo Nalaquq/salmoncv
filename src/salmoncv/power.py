@@ -1,45 +1,36 @@
 #!/usr/bin/env python3
-"""
-Control Starlink and LED lights from Raspberry Pi GPIO.
-
-Assumes:
-- IN1 = GPIO17 = lights
-- IN2 = GPIO27 = Starlink
-- Relay board is active LOW
-"""
 
 import argparse
+import subprocess
 import time
-from gpiozero import OutputDevice
 
-# GPIO pin assignments
 LIGHTS_PIN = 17
 STARLINK_PIN = 27
 
-# Most relay boards are active LOW:
-# ON = GPIO LOW
-# OFF = GPIO HIGH
-lights = OutputDevice(LIGHTS_PIN, active_high=False, initial_value=False)
-starlink = OutputDevice(STARLINK_PIN, active_high=False, initial_value=False)
+
+def _set_pin(pin, active):
+    # Active-low relay: ON = drive low, OFF = drive high
+    level = "dl" if active else "dh"
+    subprocess.run(["pinctrl", "set", str(pin), "op", level], check=True)
 
 
 def lights_on():
-    lights.on()
+    _set_pin(LIGHTS_PIN, True)
     print("Lights ON")
 
 
 def lights_off():
-    lights.off()
+    _set_pin(LIGHTS_PIN, False)
     print("Lights OFF")
 
 
 def starlink_on():
-    starlink.on()
+    _set_pin(STARLINK_PIN, True)
     print("Starlink ON")
 
 
 def starlink_off():
-    starlink.off()
+    _set_pin(STARLINK_PIN, False)
     print("Starlink OFF")
 
 
@@ -98,8 +89,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    finally:
-        # Safety: leave both off when script exits
-        all_off()
+    main()

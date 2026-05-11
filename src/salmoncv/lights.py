@@ -2,17 +2,17 @@
 
 import argparse
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from astral import LocationInfo
 from astral.sun import sun
+
+from salmoncv.power import lights_on, lights_off
 
 # Quinhagak, Alaska
 DEFAULT_LAT = 59.748
 DEFAULT_LON = -161.922
 DEFAULT_TZ = "America/Anchorage"
-
-LIGHTS_PIN = 17
 
 
 def get_civil_twilight(lat, lon, timezone, date=None):
@@ -54,12 +54,6 @@ def main():
         help="Print schedule without toggling GPIO",
     )
     args = parser.parse_args()
-
-    from gpiozero import OutputDevice
-
-    relay = None
-    if not args.dry_run:
-        relay = OutputDevice(LIGHTS_PIN, active_high=False, initial_value=False)
 
     lights_are_on = False
     last_schedule_date = None
@@ -121,21 +115,21 @@ def main():
 
             if should_be_on and not lights_are_on:
                 print(f"{now.strftime('%H:%M:%S')} | Lights ON")
-                if relay:
-                    relay.on()
+                if not args.dry_run:
+                    lights_on()
                 lights_are_on = True
             elif not should_be_on and lights_are_on:
                 print(f"{now.strftime('%H:%M:%S')} | Lights OFF")
-                if relay:
-                    relay.off()
+                if not args.dry_run:
+                    lights_off()
                 lights_are_on = False
 
             time.sleep(args.check_interval)
 
     except KeyboardInterrupt:
         print("\nShutting down — turning lights off.")
-        if relay:
-            relay.off()
+        if not args.dry_run:
+            lights_off()
 
 
 if __name__ == "__main__":

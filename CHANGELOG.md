@@ -16,8 +16,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `camera.py`: `capture_log.csv` written on every run with timestamp, image path, file size, resolution, and BME280 environmental data (temperature, humidity, pressure)
 
 ### Changed
+- `power.py`: switched from `gpiozero` to `pinctrl` so GPIO state persists after process exit (fixes relay resetting immediately)
+- `lights.py`: now reuses `lights_on()`/`lights_off()` from `power.py` instead of managing GPIO directly
 - `camera.py`: Coral/PIL imports deferred to only load when inference is enabled; `--model` no longer required with `--no-inference`
 - `camera.py`: BME280 sensor reading attempted automatically each capture; columns left blank if sensor unavailable
+- Removed `gpiozero` from project dependencies (`pinctrl` is built into Pi 5)
 - `sensors.py`: rewrote to log BME280 data to CSV with timestamps, configurable interval and log file path via CLI args (`--logfile`, `--interval`), extracted `read_sensor()` function for reuse
 - `sensors.py`: default log path set to `~/salmoncv/data/sensor_log.csv`
 - `.gitignore`: added `data/` directory
