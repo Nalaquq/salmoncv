@@ -141,3 +141,21 @@ Usage:
 **User**: Still not working — lights clicked on late and "lights off" didn't turn them off.
 
 **Claude**: Relay polarity was inverted. Testing with `pinctrl set 17 op dh` confirmed the relay is active-high, not active-low. Fixed `power.py`: ON = drive high, OFF = drive low.
+
+---
+
+**User**: It is time to write documentation for what we have introduced and anything else we need. Review and revise the docs directory with instructions for a non-expert.
+
+**Claude**: Created two new documentation files:
+
+1. `README.md` (repo root) — Project overview, hardware list, quick start, command table, project structure, and links to setup guides. This is what people see first on GitHub.
+
+2. `docs/usage-guide.md` — Complete user manual written for non-experts. Covers:
+   - Installation and environment activation
+   - Every command with examples and option tables (camera, lights, sensors, power, probe)
+   - Background sessions with tmux
+   - Viewing log files
+   - Troubleshooting common issues (command not found, camera busy, sensor not detected, lights resetting, Coral TPU issues)
+   - Quick reference card
+
+Existing docs kept as-is — they serve as developer reference and project history.
