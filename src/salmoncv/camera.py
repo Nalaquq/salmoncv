@@ -35,6 +35,24 @@ def capture_image(command, image_path, width, height):
     )
 
 
+def try_read_sensor():
+    try:
+        import bme280
+        import smbus2
+        from salmoncv.sensors import PORT, ADDRESS
+
+        bus = smbus2.SMBus(PORT)
+        calibration_params = bme280.load_calibration_params(bus, ADDRESS)
+        data = bme280.sample(bus, ADDRESS, calibration_params)
+        return {
+            "temperature_c": round(data.temperature, 2),
+            "humidity": round(data.humidity, 2),
+            "pressure_hpa": round(data.pressure, 2),
+        }
+    except Exception:
+        return {"temperature_c": "", "humidity": "", "pressure_hpa": ""}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default=None)
@@ -60,11 +78,33 @@ def main():
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
+    # --- Capture log (always written) ---
+    capture_log_path = outdir / "capture_log.csv"
+    capture_fieldnames = [
+        "timestamp",
+        "image_path",
+        "file_size_kb",
+        "width",
+        "height",
+        "temperature_c",
+        "humidity",
+        "pressure_hpa",
+    ]
+
+    write_capture_header = (
+        not capture_log_path.exists() or capture_log_path.stat().st_size == 0
+    )
+    capture_log = open(capture_log_path, "a", newline="", encoding="utf-8")
+    capture_writer = csv.DictWriter(capture_log, fieldnames=capture_fieldnames)
+    if write_capture_header:
+        capture_writer.writeheader()
+
+    # --- Inference log (only with model) ---
     interpreter = None
     model_size = None
     labels = {}
-    writer = None
-    csvfile = None
+    inference_writer = None
+    inference_log = None
 
     if run_inference:
         from PIL import Image
@@ -72,17 +112,17 @@ def main():
         from pycoral.utils.edgetpu import make_interpreter
 
         labels = load_labels(args.labels)
-        csv_path = outdir / "inference_log.csv"
+        inference_log_path = outdir / "inference_log.csv"
 
         interpreter = make_interpreter(args.model)
         interpreter.allocate_tensors()
         model_size = common.input_size(interpreter)
 
-        csvfile = open(csv_path, "a", newline="", encoding="utf-8")
-        writer = csv.writer(csvfile)
+        inference_log = open(inference_log_path, "a", newline="", encoding="utf-8")
+        inference_writer = csv.writer(inference_log)
 
-        if csv_path.stat().st_size == 0:
-            writer.writerow([
+        if inference_log_path.stat().st_size == 0:
+            inference_writer.writerow([
                 "timestamp",
                 "image_path",
                 "rank",
@@ -94,8 +134,9 @@ def main():
     try:
         while True:
             start_time = time.time()
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            image_path = outdir / f"capture_{timestamp}.jpg"
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            image_path = outdir / f"capture_{file_timestamp}.jpg"
 
             capture_image(
                 args.camera_command,
@@ -104,7 +145,30 @@ def main():
                 args.height,
             )
 
-            print(f"{timestamp} | {image_path}")
+            file_size_kb = round(image_path.stat().st_size / 1024, 1)
+            env = try_read_sensor()
+
+            capture_writer.writerow({
+                "timestamp": timestamp,
+                "image_path": image_path.name,
+                "file_size_kb": file_size_kb,
+                "width": args.width,
+                "height": args.height,
+                "temperature_c": env["temperature_c"],
+                "humidity": env["humidity"],
+                "pressure_hpa": env["pressure_hpa"],
+            })
+            capture_log.flush()
+
+            env_str = ""
+            if env["temperature_c"] != "":
+                env_str = (
+                    f"  {env['temperature_c']}°C"
+                    f"  {env['humidity']}%"
+                    f"  {env['pressure_hpa']}hPa"
+                )
+
+            print(f"{timestamp} | {image_path.name} | {file_size_kb}KB{env_str}")
 
             if run_inference:
                 from PIL import Image
@@ -129,7 +193,7 @@ def main():
                         f"label={label} score={result.score:.4f}"
                     )
 
-                    writer.writerow([
+                    inference_writer.writerow([
                         timestamp,
                         str(image_path),
                         rank,
@@ -138,7 +202,7 @@ def main():
                         result.score,
                     ])
 
-                csvfile.flush()
+                inference_log.flush()
 
             elapsed = time.time() - start_time
             time.sleep(max(0, args.interval - elapsed))
@@ -146,8 +210,9 @@ def main():
     except KeyboardInterrupt:
         print("\nStopped.")
     finally:
-        if csvfile:
-            csvfile.close()
+        capture_log.close()
+        if inference_log:
+            inference_log.close()
 
 
 if __name__ == "__main__":

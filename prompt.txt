@@ -106,3 +106,9 @@ Usage: `salmoncv-sensors --logfile data/environment.csv --interval 5`
 
 Test with: `salmoncv-camera --no-inference --outdir ~/salmoncv/test_captures`
 Single shot: `rpicam-still -o test.jpg --width 4056 --height 3040 --timeout 1000 --nopreview`
+
+---
+
+**User**: Create a log file for every time the camera is running to gather and organize metadata for each image.
+
+**Claude**: Added `capture_log.csv` to `camera.py` — written on every run regardless of inference mode. Each row contains: timestamp, image_path, file_size_kb, width, height, temperature_c, humidity, pressure_hpa. BME280 readings are attempted automatically via `try_read_sensor()` — columns are left blank if the sensor isn't connected. The inference log remains separate and is only written when a model is loaded.
