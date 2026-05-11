@@ -17,6 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - `power.py`: switched from `gpiozero` to `pinctrl` so GPIO state persists after process exit (fixes relay resetting immediately)
+- `power.py`: fixed relay polarity — relay is active-high (drive high = ON, drive low = OFF)
 - `lights.py`: now reuses `lights_on()`/`lights_off()` from `power.py` instead of managing GPIO directly
 - `camera.py`: Coral/PIL imports deferred to only load when inference is enabled; `--model` no longer required with `--no-inference`
 - `camera.py`: BME280 sensor reading attempted automatically each capture; columns left blank if sensor unavailable

@@ -9,8 +9,8 @@ STARLINK_PIN = 27
 
 
 def _set_pin(pin, active):
-    # Active-low relay: ON = drive low, OFF = drive high
-    level = "dl" if active else "dh"
+    # Active-high relay: ON = drive high, OFF = drive low
+    level = "dh" if active else "dl"
     subprocess.run(["pinctrl", "set", str(pin), "op", level], check=True)
 
 
