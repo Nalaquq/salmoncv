@@ -1,0 +1,1 @@
+bash: libcamera-hello: command not found
