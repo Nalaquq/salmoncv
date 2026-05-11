@@ -1,0 +1,99 @@
+I want to continue developing this repo for this project, which aims to track salmon from a rasperri pi camera I built. I want to host the app in a way that is easy for an end user. This document should be used to help giude all decision processes. Please always append our chat logs to this document. 
+There are a couple things to note: 1) I had alot of trouble flashing the pi and pinning a specific version of python so that the coral TPU would be recongized. I have uplaoded two markdcown files to keep track of what I did. 
+I would liek to begin by organizing this directory in PEP convetino so that eventually this can be hosted as a python. Package.
+
+---
+
+## Chat Log
+
+### 2026-05-11 — Session 1: Initial Review
+
+**User**: Please review the prompt.txt I will use this for all our conversation. Please append our questions and answers to this document.
+
+**Claude**: Reviewed the full repo structure, all Python scripts, setup docs, and requirements. Here is the assessment:
+
+**Project Summary**:
+- Hardware: Raspberry Pi 5 + Google Coral USB TPU + BME280 sensor + relay board (lights/Starlink)
+- Core scripts: timelapse capture with Coral inference (coral_timelapse_cli_camera.py), power control (control_power.py), GPIO probing (gpio_probe.py), temp sensor (temp.py)
+- Python: 3.9.18 pinned via pyenv for Coral TPU compatibility
+- Excellent setup docs in the markdown files covering all the Coral TPU pitfalls
+
+**Security flag**: flash_os_set_pi_config.txt contains a plaintext password. Should not be committed to git; consider removing the password from the file.
+
+**Three stated goals identified**:
+1. Track salmon from Pi camera
+2. Host the app for easy end-user access
+3. Reorganize into a PEP-compliant Python package
+
+All goals are clear and achievable. The codebase is in good shape for restructuring into a proper package. Ready to proceed with PEP-compliant package reorganization when the user is ready.
+
+**User**: Don't remove the plaintext password. But organize it into PEP compliance.
+
+**Claude**: Understood — leaving flash_os_set_pi_config.txt as-is. Proceeding with PEP-compliant package reorganization.
+
+Completed reorganization into PEP-compliant src layout:
+
+```
+salmoncv/
+├── src/salmoncv/          (Python package)
+│   ├── __init__.py        (v0.1.0)
+│   ├── camera.py          (was coral_timelapse_cli_camera.py)
+│   ├── power.py           (was control_power.py)
+│   ├── sensors.py         (was temp.py — wrapped in main())
+│   └── gpio_probe.py      (was gpio_probe.py)
+├── tests/                 (placeholder)
+├── docs/                  (setup guides moved here)
+├── scripts/snapshot.sh    (moved here)
+├── pyproject.toml         (PEP 621, hatchling build backend)
+├── coral_test/            (unchanged)
+├── sys/                   (unchanged)
+├── requirements.txt       (kept for direct Pi use)
+└── .gitignore             (updated with dist/build/egg-info)
+```
+
+CLI entry points defined: salmoncv-camera, salmoncv-power, salmoncv-sensors, salmoncv-probe.
+Install with: `pip install -e .` (editable) or `pip install .`
+
+---
+
+**User**: I've added three more documents that will provide additional context. Please review them and organize them accordingly. Where is your knowledge document stored?
+
+**Claude**: Reviewed all three new documents:
+
+1. `fish_counts_project_chat_history.md` — Conversation history export covering all prior development discussions (2026-05-02 through 2026-05-11). Covers hardware selection, power system design, Flask app planning, Starlink scheduling, storage estimates, and more.
+2. `salmoncv_chronological_development_log.md` — Full development timeline from initial concept through current state. Documents hardware choices, software stack, challenges (camera focus, Coral compatibility), and future milestones.
+3. `salmoncv_technical_design_document.md` — Formal technical design: system architecture, hardware/software specs, power budget, data pipeline, Flask UI plans, ML workflow, deployment plan, BOM.
+
+All three moved to `docs/` directory alongside existing setup guides. The `docs/` directory now contains:
+- flash_os_set_pi_config.txt
+- raspberry_pi_coral_tpu_pyenv_setup.md
+- fish_counts_project_chat_history.md
+- salmoncv_chronological_development_log.md
+- salmoncv_technical_design_document.md
+
+Memory/knowledge files are stored at: `/home/nalkuq/.claude/projects/-home-nalkuq-salmoncv/memory/`
+Updated memory with full project scope (Nalaquq LLC, Quinhagak deployment, Flask UI, Starlink workflow, solar power, ML pipeline) and added a reference index for all docs.
+
+---
+
+**User**: Can we create a changelog and always update it?
+
+**Claude**: Created `CHANGELOG.md` at repo root following the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. Seeded it with all changes from the v0.1.0 PEP reorganization. Saved a feedback memory to always update the changelog after any project change going forward.
+
+---
+
+**User**: I want to configure sensors.py so it logs BME280 data in an efficient format (json, csv, or txt) as a running log I can track over time.
+
+**Claude**: Rewrote `src/salmoncv/sensors.py` to log BME280 readings to CSV. Changes:
+- Appends timestamped rows to a CSV file (default: `sensor_log.csv`)
+- Fields: timestamp, temperature_c, temperature_f, humidity, pressure_hpa
+- CLI args: `--logfile` (custom path), `--interval` (seconds between reads, default 2.0)
+- Extracted `read_sensor()` function for reuse by other modules (e.g. camera pipeline)
+- Auto-creates parent directories, writes header only on new files
+- Still prints each reading to console
+
+Usage: `salmoncv-sensors --logfile data/environment.csv --interval 5`
+
+**User**: Where will it save the CSV? Can we make it a predictable location?
+
+**Claude**: Changed default log path to `~/salmoncv/data/sensor_log.csv`. The `data/` directory is auto-created and added to `.gitignore` so logs stay out of git.

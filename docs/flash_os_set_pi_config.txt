@@ -1,0 +1,33 @@
+1) flash your rasperrby pi with the newest version of bookwork
+
+
+2) Set host name as follows: 
+Sethostname: enter nalaquqpi it will append .local
+setusername:nalaquq  
+password: Quinhagak
+configure wireless lan (user dependent) 
+
+
+3) set up your raspberry pi connect portal and enter the aut token when you flash
+
+
+Login in with this command: 
+ssh nalaquq@nalaquqpi.local 
+
+
+FROM debian:10
+	
+WORKDIR /home
+ENV HOME /home
+RUN cd ~
+RUN apt-get update
+RUN apt-get install -y git nano python3-pip python-dev pkg-config wget usbutils curl
+	
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" \
+| tee /etc/apt/sources.list.d/coral-edgetpu.list
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+RUN apt-get update
+RUN apt-get install -y edgetpu-examples
+RUN apt-get install -y udev
+RUN apt-get install -y sudo
+RUN echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="18d1", ATTR{idProduct}=="9302", MODE="0666"' > /etc/udev/rules.d/CORALUSB

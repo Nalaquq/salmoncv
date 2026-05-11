@@ -6,3 +6,7 @@ __pycache__/
 captures/
 salmon_captures/
 .env
+data/
+dist/
+build/
+*.egg-info/
