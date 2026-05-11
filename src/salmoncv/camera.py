@@ -7,11 +7,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from PIL import Image
-
-from pycoral.adapters import classify, common
-from pycoral.utils.edgetpu import make_interpreter
-
 
 def load_labels(path):
     labels = {}
@@ -42,7 +37,7 @@ def capture_image(command, image_path, width, height):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True)
+    parser.add_argument("--model", default=None)
     parser.add_argument("--labels", default=None)
     parser.add_argument("--outdir", default="captures")
     parser.add_argument("--interval", type=float, default=3.0)
@@ -51,19 +46,39 @@ def main():
     parser.add_argument("--height", type=int, default=3040)
     parser.add_argument("--top_k", type=int, default=3)
     parser.add_argument("--threshold", type=float, default=0.05)
+    parser.add_argument(
+        "--no-inference",
+        action="store_true",
+        help="Capture images only, skip Coral TPU inference",
+    )
     args = parser.parse_args()
+
+    run_inference = not args.no_inference
+    if run_inference and not args.model:
+        parser.error("--model is required unless --no-inference is set")
 
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    labels = load_labels(args.labels)
-    csv_path = outdir / "inference_log.csv"
+    interpreter = None
+    model_size = None
+    labels = {}
+    writer = None
+    csvfile = None
 
-    interpreter = make_interpreter(args.model)
-    interpreter.allocate_tensors()
-    model_size = common.input_size(interpreter)
+    if run_inference:
+        from PIL import Image
+        from pycoral.adapters import classify, common
+        from pycoral.utils.edgetpu import make_interpreter
 
-    with open(csv_path, "a", newline="", encoding="utf-8") as csvfile:
+        labels = load_labels(args.labels)
+        csv_path = outdir / "inference_log.csv"
+
+        interpreter = make_interpreter(args.model)
+        interpreter.allocate_tensors()
+        model_size = common.input_size(interpreter)
+
+        csvfile = open(csv_path, "a", newline="", encoding="utf-8")
         writer = csv.writer(csvfile)
 
         if csv_path.stat().st_size == 0:
@@ -76,18 +91,24 @@ def main():
                 "score",
             ])
 
-        try:
-            while True:
-                start_time = time.time()
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                image_path = outdir / f"capture_{timestamp}.jpg"
+    try:
+        while True:
+            start_time = time.time()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            image_path = outdir / f"capture_{timestamp}.jpg"
 
-                capture_image(
-                    args.camera_command,
-                    image_path,
-                    args.width,
-                    args.height,
-                )
+            capture_image(
+                args.camera_command,
+                image_path,
+                args.width,
+                args.height,
+            )
+
+            print(f"{timestamp} | {image_path}")
+
+            if run_inference:
+                from PIL import Image
+                from pycoral.adapters import classify, common
 
                 image = Image.open(image_path).convert("RGB")
                 image = image.resize(model_size, Image.LANCZOS)
@@ -100,8 +121,6 @@ def main():
                     top_k=args.top_k,
                     score_threshold=args.threshold,
                 )
-
-                print(f"\n{timestamp} | {image_path}")
 
                 for rank, result in enumerate(results, start=1):
                     label = labels.get(result.id, "unknown")
@@ -121,11 +140,14 @@ def main():
 
                 csvfile.flush()
 
-                elapsed = time.time() - start_time
-                time.sleep(max(0, args.interval - elapsed))
+            elapsed = time.time() - start_time
+            time.sleep(max(0, args.interval - elapsed))
 
-        except KeyboardInterrupt:
-            print("\nStopped.")
+    except KeyboardInterrupt:
+        print("\nStopped.")
+    finally:
+        if csvfile:
+            csvfile.close()
 
 
 if __name__ == "__main__":

@@ -97,3 +97,12 @@ Usage: `salmoncv-sensors --logfile data/environment.csv --interval 5`
 **User**: Where will it save the CSV? Can we make it a predictable location?
 
 **Claude**: Changed default log path to `~/salmoncv/data/sensor_log.csv`. The `data/` directory is auto-created and added to `.gitignore` so logs stay out of git.
+
+---
+
+**User**: I want to test the Pi camera to see if it captures. Can you add a --no-inference flag?
+
+**Claude**: Added `--no-inference` flag to `camera.py`. Coral/PIL imports are deferred so they only load when inference is enabled — the camera works without the TPU plugged in. `--model` is no longer required when using `--no-inference`.
+
+Test with: `salmoncv-camera --no-inference --outdir ~/salmoncv/test_captures`
+Single shot: `rpicam-still -o test.jpg --width 4056 --height 3040 --timeout 1000 --nopreview`

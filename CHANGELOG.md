@@ -8,7 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `camera.py`: `--no-inference` flag to capture images without Coral TPU
+
 ### Changed
+- `camera.py`: Coral/PIL imports deferred to only load when inference is enabled; `--model` no longer required with `--no-inference`
 - `sensors.py`: rewrote to log BME280 data to CSV with timestamps, configurable interval and log file path via CLI args (`--logfile`, `--interval`), extracted `read_sensor()` function for reuse
 - `sensors.py`: default log path set to `~/salmoncv/data/sensor_log.csv`
 - `.gitignore`: added `data/` directory
