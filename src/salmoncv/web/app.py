@@ -18,6 +18,8 @@ from flask import (
 
 from salmoncv.storage import get_capture_dir, get_storage_info, set_storage_pref, DATA_DIR
 
+VENV_BIN = Path(os.sys.executable).parent
+
 THUMB_DIR = DATA_DIR / "thumbs"
 PID_FILE = DATA_DIR / ".camera_pid"
 LIGHTS_PID = DATA_DIR / ".lights_pid"
@@ -133,7 +135,7 @@ def create_app():
 
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         cmd = [
-            "salmoncv-camera", "--no-inference",
+            str(VENV_BIN / "salmoncv-camera"), "--no-inference",
             "--outdir", str(get_capture_dir()),
             "--interval", str(interval),
             "--width", str(width),
@@ -507,7 +509,7 @@ def create_app():
             "mode": mode, "on_time": on_time, "off_time": off_time,
         }))
 
-        cmd = ["salmoncv-lights"]
+        cmd = [str(VENV_BIN / "salmoncv-lights")]
         if mode == "manual" and on_time:
             cmd.extend(["--on-time", on_time])
         if mode == "manual" and off_time:
@@ -572,7 +574,7 @@ def create_app():
             "upload_speed": upload_speed,
         }))
 
-        cmd = ["salmoncv-starlink",
+        cmd = [str(VENV_BIN / "salmoncv-starlink"),
                "--upload-speed", str(upload_speed),
                "--admin-duration", str(admin_duration)]
         if mode == "manual" and on_time:
@@ -630,7 +632,7 @@ def create_app():
             cam_width = data.get("camera_width", 4056)
             cam_height = data.get("camera_height", 3040)
             proc = subprocess.Popen(
-                ["salmoncv-camera", "--no-inference",
+                [str(VENV_BIN / "salmoncv-camera"), "--no-inference",
                  "--outdir", str(get_capture_dir()),
                  "--interval", str(cam_interval),
                  "--width", str(cam_width),
@@ -647,7 +649,7 @@ def create_app():
         if not sens_running:
             sens_interval = data.get("sensor_interval", 30)
             proc = subprocess.Popen(
-                ["salmoncv-sensors", "--interval", str(sens_interval)],
+                [str(VENV_BIN / "salmoncv-sensors"), "--interval", str(sens_interval)],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             SENSORS_PID.write_text(str(proc.pid))
@@ -664,7 +666,7 @@ def create_app():
                     ls_conf.update(json.loads(LIGHTS_CONF.read_text()))
                 except (json.JSONDecodeError, ValueError):
                     pass
-            cmd = ["salmoncv-lights"]
+            cmd = [str(VENV_BIN / "salmoncv-lights")]
             if ls_conf["mode"] == "manual":
                 if ls_conf.get("on_time"):
                     cmd.extend(["--on-time", ls_conf["on_time"]])
@@ -691,7 +693,7 @@ def create_app():
                     sl_conf.update(json.loads(STARLINK_CONF.read_text()))
                 except (json.JSONDecodeError, ValueError):
                     pass
-            cmd = ["salmoncv-starlink",
+            cmd = [str(VENV_BIN / "salmoncv-starlink"),
                    "--upload-speed", str(sl_conf["upload_speed"]),
                    "--admin-duration", str(sl_conf["admin_duration"])]
             if sl_conf["mode"] == "manual" and sl_conf.get("on_time"):

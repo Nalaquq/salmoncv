@@ -15,6 +15,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `scripts/revert_hotspot.sh` — reverts all hotspot changes, restoring default networking
 - `setup_hotspot.sh` rewritten with `--dry-run`, `--safe`, and `--revert` flags for safe remote setup over SSH
 
+### Fixed
+- **Start Counting broken after boot**: subprocess calls used bare command names (`salmoncv-camera`, etc.) which weren't on PATH when Flask ran via systemd. Now uses full venv binary paths resolved at runtime via `sys.executable`.
+
 ### Changed
 - Hardware-only dependencies (pycoral, tflite-runtime, RPi.bme280, smbus2) moved to `[project.optional-dependencies.pi]`; install with `pip install -e ".[pi]"` on the Pi
 - `docs_site/` directory with all documentation source files

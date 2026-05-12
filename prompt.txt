@@ -395,3 +395,9 @@ To enable: go to GitHub repo → Settings → Pages → Source = "GitHub Actions
 - `--safe [MINUTES]`: installs the hotspot AND schedules automatic revert (default 5 min). If SSH breaks, just wait and networking restores itself
 - `--revert`: undoes all hotspot changes immediately
 Created `scripts/revert_hotspot.sh` as the revert engine. Updated docs to recommend the safe workflow: dry-run → safe install → reboot → verify → cancel revert.
+
+---
+
+**User**: The 'Start Counting' feature is buggy. Works in debug mode from shell but not after boot via systemd.
+
+**Claude**: Root cause: PATH. When Flask runs via systemd, the venv bin directory isn't on PATH. All `subprocess.Popen(["salmoncv-camera", ...])` calls fail silently because `stderr=subprocess.DEVNULL` swallows the "command not found" error. The dashboard reports "started" with a PID that's already dead. Fix: added `VENV_BIN = Path(os.sys.executable).parent` and replaced all 8 bare command names with full venv paths like `str(VENV_BIN / "salmoncv-camera")`. Now works identically from shell and systemd.
