@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from salmoncv import storage
+from salmoncv import power, storage
 from salmoncv.web import app as web_module
 
 
@@ -41,6 +41,10 @@ def patch_all_paths(tmp_path, monkeypatch):
     monkeypatch.setattr(web_module, "STARLINK_CONF", data / "starlink_config.json")
     monkeypatch.setattr(web_module, "SYSTEM_CONF", data / "system_config.json")
     monkeypatch.setattr(web_module, "WEB_LOG", data / "web_log.csv")
+
+    # Patch power module state files so create_app() cleanup targets tmp_path
+    monkeypatch.setattr(power, "LIGHTS_STATE", data / ".lights_on_since")
+    monkeypatch.setattr(power, "STARLINK_STATE", data / ".starlink_on_since")
 
     return tmp_path
 
@@ -522,25 +526,43 @@ class TestSystemAPI:
             assert data["starlink_relay"] is False
 
     @patch("salmoncv.web.app.subprocess.Popen")
-    def test_system_running_relays_on_when_state_files_exist(self, mock_popen, client):
-        from salmoncv.power import LIGHTS_STATE, STARLINK_STATE
+    def test_system_running_relays_on_when_state_files_exist(self, mock_popen, tmp_path):
+        lights_state = power.LIGHTS_STATE
+        starlink_state = power.STARLINK_STATE
         mock_proc = MagicMock()
         mock_proc.pid = 10008
         mock_popen.return_value = mock_proc
 
-        client.post("/api/system/start", json={})
-        LIGHTS_STATE.parent.mkdir(parents=True, exist_ok=True)
-        LIGHTS_STATE.write_text("2026-05-12T00:00:00")
-        STARLINK_STATE.write_text("2026-05-12T00:00:00")
+        lights_state.write_text("2026-05-12T00:00:00")
+        starlink_state.write_text("2026-05-12T00:00:00")
 
-        with patch("os.kill"):
-            r = client.get("/api/system/running")
-            data = r.get_json()
-            assert data["lights_relay"] is True
-            assert data["starlink_relay"] is True
+        # create_app clears stale files, so create app AFTER writing them
+        # and re-write to simulate relay turning on after startup
+        app = web_module.create_app()
+        app.config["TESTING"] = True
+        with app.test_client() as c:
+            c.post("/api/system/start", json={})
+            lights_state.write_text("2026-05-12T00:00:00")
+            starlink_state.write_text("2026-05-12T00:00:00")
 
-        LIGHTS_STATE.unlink(missing_ok=True)
-        STARLINK_STATE.unlink(missing_ok=True)
+            with patch("os.kill"):
+                r = c.get("/api/system/running")
+                data = r.get_json()
+                assert data["lights_relay"] is True
+                assert data["starlink_relay"] is True
+
+    def test_create_app_clears_stale_relay_state_files(self, tmp_path):
+        lights_state = power.LIGHTS_STATE
+        starlink_state = power.STARLINK_STATE
+        lights_state.write_text("2026-05-11T22:00:00")
+        starlink_state.write_text("2026-05-11T22:00:00")
+        assert lights_state.exists()
+        assert starlink_state.exists()
+
+        web_module.create_app()
+
+        assert not lights_state.exists()
+        assert not starlink_state.exists()
 
     @patch("salmoncv.web.app.subprocess.Popen")
     def test_system_start_then_running_shows_all(self, mock_popen, client):

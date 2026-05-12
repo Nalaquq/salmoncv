@@ -407,3 +407,9 @@ Created `scripts/revert_hotspot.sh` as the revert engine. Updated docs to recomm
 **User**: Dashboard shows lights AND starlink both "on" after Start Counting, but only the lights relay is actually energized.
 
 **Claude**: The `/api/system/running` endpoint only checked PID files (scheduler alive), not actual relay state. When the lights scheduler starts and turns on the relay, the dashboard showed "ON" for both because both schedulers had valid PIDs. Fix: added `lights_relay` and `starlink_relay` boolean fields to the response that check the actual GPIO state files (`LIGHTS_STATE.exists()`, `STARLINK_STATE.exists()`), imported from `salmoncv.power`. Updated `dashboard.html` to show "Sched" for scheduler status and a separate "relay: ON/OFF" badge for actual GPIO state. Added 2 new tests verifying relays are independent of scheduler PID status. Total: 103 tests passing.
+
+---
+
+**User**: Dashboard still shows lights and starlink as "on" after boot even though they're both physically off.
+
+**Claude**: Root cause: the relay state files (`.lights_on_since`, `.starlink_on_since`) in `~/salmoncv/data/` persist on disk across reboots, but GPIO pins reset to LOW on power cycle. The dashboard reads these stale files and reports relays as "ON". Fix: `create_app()` now clears both state files on startup, since after a reboot the relays are always off. Added a test verifying stale state files are removed when the Flask app starts. Total: 104 tests passing.

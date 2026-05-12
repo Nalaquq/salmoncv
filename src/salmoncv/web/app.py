@@ -52,6 +52,11 @@ def _log_request(endpoint, action="", detail=""):
 def create_app():
     app = Flask(__name__)
 
+    from salmoncv.power import LIGHTS_STATE, STARLINK_STATE
+    for sf in (LIGHTS_STATE, STARLINK_STATE):
+        if sf.exists():
+            sf.unlink()
+
     # --- Page routes ---
 
     @app.route("/")
