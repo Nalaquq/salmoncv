@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import json
 import os
 import shutil
 import signal
@@ -19,6 +20,10 @@ from salmoncv.storage import get_capture_dir, get_storage_info, set_storage_pref
 
 THUMB_DIR = DATA_DIR / "thumbs"
 PID_FILE = DATA_DIR / ".camera_pid"
+LIGHTS_PID = DATA_DIR / ".lights_pid"
+STARLINK_PID = DATA_DIR / ".starlink_pid"
+LIGHTS_CONF = DATA_DIR / "lights_config.json"
+STARLINK_CONF = DATA_DIR / "starlink_config.json"
 WEB_LOG = DATA_DIR / "web_log.csv"
 
 
@@ -358,6 +363,146 @@ def create_app():
             })
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)})
+
+    # --- Scheduler API ---
+
+    def _pid_running(pid_file):
+        if not pid_file.exists():
+            return False, 0
+        try:
+            pid = int(pid_file.read_text().strip())
+            os.kill(pid, 0)
+            return True, pid
+        except (OSError, ValueError):
+            pid_file.unlink(missing_ok=True)
+            return False, 0
+
+    @app.route("/api/scheduler/lights/config")
+    def api_lights_config():
+        conf = {"mode": "auto", "on_time": "", "off_time": ""}
+        if LIGHTS_CONF.exists():
+            try:
+                conf.update(json.loads(LIGHTS_CONF.read_text()))
+            except (json.JSONDecodeError, ValueError):
+                pass
+        running, pid = _pid_running(LIGHTS_PID)
+        conf["running"] = running
+        conf["pid"] = pid
+        return jsonify(conf)
+
+    @app.route("/api/scheduler/lights/start", methods=["POST"])
+    def api_lights_start():
+        running, _ = _pid_running(LIGHTS_PID)
+        if running:
+            return jsonify({"ok": False, "error": "Lights scheduler already running"})
+
+        data = request.get_json(silent=True) or {}
+        mode = data.get("mode", "auto")
+        on_time = data.get("on_time", "")
+        off_time = data.get("off_time", "")
+
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        LIGHTS_CONF.write_text(json.dumps({
+            "mode": mode, "on_time": on_time, "off_time": off_time,
+        }))
+
+        cmd = ["salmoncv-lights"]
+        if mode == "manual" and on_time:
+            cmd.extend(["--on-time", on_time])
+        if mode == "manual" and off_time:
+            cmd.extend(["--off-time", off_time])
+
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        LIGHTS_PID.write_text(str(proc.pid))
+        _log_request("/api/scheduler/lights/start", "lights_scheduler_start",
+                      f"mode={mode} on={on_time} off={off_time} pid={proc.pid}")
+        return jsonify({"ok": True, "pid": proc.pid})
+
+    @app.route("/api/scheduler/lights/stop", methods=["POST"])
+    def api_lights_stop():
+        running, pid = _pid_running(LIGHTS_PID)
+        if not running:
+            return jsonify({"ok": False, "error": "Lights scheduler not running"})
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+        LIGHTS_PID.unlink(missing_ok=True)
+        _log_request("/api/scheduler/lights/stop", "lights_scheduler_stop")
+        return jsonify({"ok": True})
+
+    @app.route("/api/scheduler/starlink/config")
+    def api_starlink_config():
+        conf = {
+            "mode": "auto", "on_time": "", "upload_time": "",
+            "admin_time": "12:00", "admin_duration": 15,
+            "upload_speed": 5.0,
+        }
+        if STARLINK_CONF.exists():
+            try:
+                conf.update(json.loads(STARLINK_CONF.read_text()))
+            except (json.JSONDecodeError, ValueError):
+                pass
+        running, pid = _pid_running(STARLINK_PID)
+        conf["running"] = running
+        conf["pid"] = pid
+        return jsonify(conf)
+
+    @app.route("/api/scheduler/starlink/start", methods=["POST"])
+    def api_starlink_start():
+        running, _ = _pid_running(STARLINK_PID)
+        if running:
+            return jsonify({"ok": False, "error": "Starlink scheduler already running"})
+
+        data = request.get_json(silent=True) or {}
+        mode = data.get("mode", "auto")
+        on_time = data.get("on_time", "")
+        upload_time = data.get("upload_time", "")
+        admin_time = data.get("admin_time", "12:00")
+        admin_duration = data.get("admin_duration", 15)
+        upload_speed = data.get("upload_speed", 5.0)
+
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        STARLINK_CONF.write_text(json.dumps({
+            "mode": mode, "on_time": on_time, "upload_time": upload_time,
+            "admin_time": admin_time, "admin_duration": admin_duration,
+            "upload_speed": upload_speed,
+        }))
+
+        cmd = ["salmoncv-starlink",
+               "--upload-speed", str(upload_speed),
+               "--admin-duration", str(admin_duration)]
+        if mode == "manual" and on_time:
+            cmd.extend(["--on-time", on_time])
+        if upload_time:
+            cmd.extend(["--upload-time", str(upload_time)])
+        if admin_time and admin_time != "off":
+            cmd.extend(["--admin-time", admin_time])
+        elif admin_time == "off":
+            cmd.extend(["--admin-time", "off"])
+
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        STARLINK_PID.write_text(str(proc.pid))
+        _log_request("/api/scheduler/starlink/start", "starlink_scheduler_start",
+                      f"mode={mode} on={on_time} upload={upload_time} admin={admin_time} pid={proc.pid}")
+        return jsonify({"ok": True, "pid": proc.pid})
+
+    @app.route("/api/scheduler/starlink/stop", methods=["POST"])
+    def api_starlink_stop():
+        running, pid = _pid_running(STARLINK_PID)
+        if not running:
+            return jsonify({"ok": False, "error": "Starlink scheduler not running"})
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+        STARLINK_PID.unlink(missing_ok=True)
+        _log_request("/api/scheduler/starlink/stop", "starlink_scheduler_stop")
+        return jsonify({"ok": True})
 
     # --- Storage API ---
 

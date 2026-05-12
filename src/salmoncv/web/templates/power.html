@@ -6,51 +6,164 @@
 <div class="grid">
   <div class="card">
     <h2>Lights</h2>
-    <p><span class="label">Status:</span> <span id="lightsStatus" class="badge badge-off">--</span></p>
+    <p><span class="label">Relay:</span> <span id="lightsStatus" class="badge badge-off">--</span></p>
     <p><span class="label">On since:</span> <span id="lightsSince">--</span></p>
     <p><span class="label">Elapsed:</span> <span id="lightsElapsed">--</span></p>
     <div class="btn-group">
-      <button class="btn btn-green" onclick="togglePower('lights','on')">Lights ON</button>
-      <button class="btn btn-red" onclick="togglePower('lights','off')">Lights OFF</button>
+      <button class="btn btn-green" onclick="togglePower('lights','on')">ON</button>
+      <button class="btn btn-red" onclick="togglePower('lights','off')">OFF</button>
     </div>
     <p id="lightsMsg" class="msg"></p>
   </div>
 
   <div class="card">
     <h2>Starlink</h2>
-    <p><span class="label">Status:</span> <span id="slStatus" class="badge badge-off">--</span></p>
+    <p><span class="label">Relay:</span> <span id="slStatus" class="badge badge-off">--</span></p>
     <p><span class="label">On since:</span> <span id="slSince">--</span></p>
     <p><span class="label">Elapsed:</span> <span id="slElapsed">--</span></p>
     <div class="btn-group">
-      <button class="btn btn-green" onclick="togglePower('starlink','on')">Starlink ON</button>
-      <button class="btn btn-red" onclick="togglePower('starlink','off')">Starlink OFF</button>
+      <button class="btn btn-green" onclick="togglePower('starlink','on')">ON</button>
+      <button class="btn btn-red" onclick="togglePower('starlink','off')">OFF</button>
     </div>
     <p id="slMsg" class="msg"></p>
   </div>
 </div>
 
 <div class="card">
-  <h2>Light Schedule</h2>
-  <p><span class="label">Dawn:</span> <span id="schedDawn">--</span></p>
-  <p><span class="label">Dusk:</span> <span id="schedDusk">--</span></p>
-  <p class="muted">Lights turn on at dusk, off at dawn (civil twilight for Quinhagak, AK).</p>
+  <h2>Lights Scheduler</h2>
+  <p><span class="label">Status:</span> <span id="lsState" class="badge badge-off">--</span></p>
+  <p><span class="label">Dawn:</span> <span id="schedDawn">--</span> <span class="label" style="margin-left:1rem">Dusk:</span> <span id="schedDusk">--</span></p>
+
+  <div class="form-row">
+    <label>Mode:</label>
+    <select id="lsMode" class="input-sm" onchange="toggleLightsMode()">
+      <option value="auto">Auto (civil twilight)</option>
+      <option value="manual">Manual times</option>
+    </select>
+  </div>
+  <div id="lsManual" style="display:none">
+    <div class="form-row">
+      <label for="lsOn">Lights on:</label>
+      <input type="time" id="lsOn" class="input-sm" value="20:00">
+    </div>
+    <div class="form-row">
+      <label for="lsOff">Lights off:</label>
+      <input type="time" id="lsOff" class="input-sm" value="06:00">
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-green" id="lsStartBtn" onclick="startLightsScheduler()">Start Scheduler</button>
+    <button class="btn btn-red" id="lsStopBtn" onclick="stopLightsScheduler()" disabled>Stop Scheduler</button>
+  </div>
+  <p id="lsMsg" class="msg"></p>
 </div>
 
 <div class="card">
-  <h2>Starlink Upload Queue</h2>
-  <p><span class="label">Pending images:</span> <span id="slPending">--</span></p>
-  <p><span class="label">Pending size:</span> <span id="slSize">--</span></p>
+  <h2>Starlink Scheduler</h2>
+  <p><span class="label">Status:</span> <span id="ssState" class="badge badge-off">--</span></p>
+  <p><span class="label">Pending:</span> <span id="slPending">--</span> images (<span id="slSize">--</span> MB)</p>
+
+  <div class="form-row">
+    <label>Mode:</label>
+    <select id="ssMode" class="input-sm" onchange="toggleStarlinkMode()">
+      <option value="auto">Auto (bandwidth calc)</option>
+      <option value="manual">Manual daily time</option>
+    </select>
+  </div>
+  <div id="ssManual" style="display:none">
+    <div class="form-row">
+      <label for="ssOn">Start time:</label>
+      <input type="time" id="ssOn" class="input-sm" value="02:00">
+    </div>
+  </div>
+  <div class="form-row">
+    <label for="ssUpload">Upload window (min):</label>
+    <input type="number" id="ssUpload" class="input-sm" value="" min="1" max="180" placeholder="auto">
+  </div>
+  <div class="form-row">
+    <label for="ssSpeed">Upload speed (Mbps):</label>
+    <input type="number" id="ssSpeed" class="input-sm" value="5" min="0.5" max="100" step="0.5">
+  </div>
+  <div class="form-row">
+    <label for="ssAdmin">Admin window:</label>
+    <input type="time" id="ssAdmin" class="input-sm" value="12:00">
+    <span class="muted">blank = off</span>
+  </div>
+  <div class="form-row">
+    <label for="ssAdminDur">Admin duration (min):</label>
+    <input type="number" id="ssAdminDur" class="input-sm" value="15" min="5" max="120">
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-green" id="ssStartBtn" onclick="startStarlinkScheduler()">Start Scheduler</button>
+    <button class="btn btn-red" id="ssStopBtn" onclick="stopStarlinkScheduler()" disabled>Stop Scheduler</button>
+  </div>
+  <p id="ssMsg" class="msg"></p>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 function togglePower(device, action) {
-  var url = '/api/power/' + device;
   var msgId = device === 'lights' ? 'lightsMsg' : 'slMsg';
-  scv.post(url, {action: action}, function(d) {
+  scv.post('/api/power/' + device, {action: action}, function(d) {
     scv.text(msgId, d.ok ? device + ' turned ' + action : 'Error: ' + d.error);
     refreshPower();
+  });
+}
+
+function toggleLightsMode() {
+  var m = document.getElementById('lsMode').value;
+  document.getElementById('lsManual').style.display = m === 'manual' ? 'block' : 'none';
+}
+
+function toggleStarlinkMode() {
+  var m = document.getElementById('ssMode').value;
+  document.getElementById('ssManual').style.display = m === 'manual' ? 'block' : 'none';
+}
+
+function startLightsScheduler() {
+  var mode = document.getElementById('lsMode').value;
+  var body = {mode: mode};
+  if (mode === 'manual') {
+    body.on_time = document.getElementById('lsOn').value;
+    body.off_time = document.getElementById('lsOff').value;
+  }
+  scv.post('/api/scheduler/lights/start', body, function(d) {
+    scv.text('lsMsg', d.ok ? 'Started (PID ' + d.pid + ')' : 'Error: ' + d.error);
+    refreshSchedulers();
+  });
+}
+
+function stopLightsScheduler() {
+  scv.post('/api/scheduler/lights/stop', {}, function(d) {
+    scv.text('lsMsg', d.ok ? 'Stopped' : 'Error: ' + d.error);
+    refreshSchedulers();
+  });
+}
+
+function startStarlinkScheduler() {
+  var mode = document.getElementById('ssMode').value;
+  var body = {
+    mode: mode,
+    upload_speed: parseFloat(document.getElementById('ssSpeed').value) || 5,
+    admin_duration: parseInt(document.getElementById('ssAdminDur').value) || 15
+  };
+  var upload = document.getElementById('ssUpload').value;
+  if (upload) body.upload_time = parseInt(upload);
+  if (mode === 'manual') body.on_time = document.getElementById('ssOn').value;
+  var admin = document.getElementById('ssAdmin').value;
+  body.admin_time = admin || 'off';
+
+  scv.post('/api/scheduler/starlink/start', body, function(d) {
+    scv.text('ssMsg', d.ok ? 'Started (PID ' + d.pid + ')' : 'Error: ' + d.error);
+    refreshSchedulers();
+  });
+}
+
+function stopStarlinkScheduler() {
+  scv.post('/api/scheduler/starlink/stop', {}, function(d) {
+    scv.text('ssMsg', d.ok ? 'Stopped' : 'Error: ' + d.error);
+    refreshSchedulers();
   });
 }
 
@@ -71,24 +184,48 @@ function refreshPower() {
     if (d.ok) {
       scv.text('schedDawn', d.dawn);
       scv.text('schedDusk', d.dusk);
-    } else {
-      scv.text('schedDawn', 'Unavailable');
-      scv.text('schedDusk', 'Unavailable');
     }
   });
 
   scv.get('/api/schedule/starlink', function(d) {
     if (d.ok) {
-      scv.text('slPending', d.pending_images + ' images');
-      scv.text('slSize', d.pending_mb + ' MB');
-    } else {
-      scv.text('slPending', 'Unavailable');
-      scv.text('slSize', '--');
+      scv.text('slPending', d.pending_images);
+      scv.text('slSize', d.pending_mb);
     }
   });
 }
 
+function refreshSchedulers() {
+  scv.get('/api/scheduler/lights/config', function(d) {
+    scv.text('lsState', d.running ? 'Running' : 'Stopped');
+    scv.badge('lsState', d.running);
+    document.getElementById('lsStartBtn').disabled = d.running;
+    document.getElementById('lsStopBtn').disabled = !d.running;
+    document.getElementById('lsMode').value = d.mode;
+    toggleLightsMode();
+    if (d.on_time) document.getElementById('lsOn').value = d.on_time;
+    if (d.off_time) document.getElementById('lsOff').value = d.off_time;
+  });
+
+  scv.get('/api/scheduler/starlink/config', function(d) {
+    scv.text('ssState', d.running ? 'Running' : 'Stopped');
+    scv.badge('ssState', d.running);
+    document.getElementById('ssStartBtn').disabled = d.running;
+    document.getElementById('ssStopBtn').disabled = !d.running;
+    document.getElementById('ssMode').value = d.mode;
+    toggleStarlinkMode();
+    if (d.on_time) document.getElementById('ssOn').value = d.on_time;
+    if (d.upload_time) document.getElementById('ssUpload').value = d.upload_time;
+    if (d.upload_speed) document.getElementById('ssSpeed').value = d.upload_speed;
+    if (d.admin_time && d.admin_time !== 'off') document.getElementById('ssAdmin').value = d.admin_time;
+    else document.getElementById('ssAdmin').value = '';
+    if (d.admin_duration) document.getElementById('ssAdminDur').value = d.admin_duration;
+  });
+}
+
 refreshPower();
+refreshSchedulers();
 setInterval(refreshPower, 5000);
+setInterval(refreshSchedulers, 10000);
 </script>
 {% endblock %}

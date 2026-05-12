@@ -277,3 +277,23 @@ Available in both the CLI (`--shutter`, `--gain`, `--awb`, `--ev`) and the web d
 - Preference saved to `~/salmoncv/data/storage_config.json` so it persists across restarts
 - New API endpoints: `GET /api/storage` and `POST /api/storage/set`
 - Settings page also updated with detailed storage view
+
+---
+
+**User**: It might be nice if the user can adjust the lighting and Starlink scheduling from the Flask app.
+
+**Claude**: Added full scheduler controls to the Power page:
+
+**Lights Scheduler:**
+- Auto mode (civil twilight for Quinhagak) or manual mode with custom on/off times
+- Start/stop the scheduler from the browser
+- Shows current dawn/dusk times
+- Config saved to `~/salmoncv/data/lights_config.json`
+
+**Starlink Scheduler:**
+- Auto mode (bandwidth calculation from pending images) or manual daily time
+- Configurable upload window, upload speed, admin window time, and admin duration
+- Start/stop the scheduler from the browser
+- Config saved to `~/salmoncv/data/starlink_config.json`
+
+Both schedulers run as background processes managed via PID files, same pattern as the camera time-lapse. Settings persist across restarts.

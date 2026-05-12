@@ -27,6 +27,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Settings page shows both Samsung T9 and SD Card storage with usage bars
 - Dashboard storage card with drive selector: Auto (T9 first), Samsung T9 only, or SD Card only — preference persists in `~/salmoncv/data/storage_config.json`
 - `/api/storage` and `/api/storage/set` endpoints for viewing and changing storage mode
+- Lights and Starlink scheduler controls on Power page — start/stop schedulers, switch between auto (civil twilight / bandwidth calc) and manual mode with custom times, all from the browser
+- Scheduler configs saved to JSON files in `~/salmoncv/data/` so settings persist across restarts
+- New API endpoints: `/api/scheduler/lights/config|start|stop`, `/api/scheduler/starlink/config|start|stop`
 - `lights.py`: new lights scheduler module — defaults to civil twilight at Quinhagak, AK (59.75°N, 161.92°W), supports manual `--on-time`/`--off-time` overrides, `--dry-run` mode, handles midnight sun and polar night
 - `salmoncv-lights` CLI entry point
 - `astral` dependency for solar position calculations
