@@ -18,6 +18,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - `power.py`: switched from `gpiozero` to `pinctrl` so GPIO state persists after process exit (fixes relay resetting immediately)
 - `power.py`: fixed relay polarity — relay is active-high (drive high = ON, drive low = OFF)
+- `lights.py`: CSV log at `~/salmoncv/data/lights_log.csv` tracking every on/off event, schedule changes, scheduler start/stop, and midnight sun events
 - Added `README.md` with project overview, quick start, command reference, and project structure
 - Added `docs/usage-guide.md` with detailed instructions for every command, troubleshooting, and quick reference card — written for non-expert users
 - `lights.py`: now reuses `lights_on()`/`lights_off()` from `power.py` instead of managing GPIO directly

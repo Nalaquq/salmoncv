@@ -159,3 +159,9 @@ Usage:
    - Quick reference card
 
 Existing docs kept as-is — they serve as developer reference and project history.
+
+---
+
+**User**: I want the lights to have a log file of time turned on and off so we can troubleshoot in the field.
+
+**Claude**: Added CSV logging to `lights.py` at `~/salmoncv/data/lights_log.csv`. Logs every event: scheduler_start, schedule_set, lights_on, lights_off, no_twilight, scheduler_stop. Each row includes timestamp, event type, scheduled on/off times, and mode (auto/manual/mixed). Configurable with `--logfile`.
