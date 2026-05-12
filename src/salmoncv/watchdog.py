@@ -46,7 +46,8 @@ def get_max_night_hours():
         s = sun(loc.observer, date=today, tzinfo=DEFAULT_TZ)
         dawn = s["dawn"]
         dusk = s["dusk"]
-        night_hours = 24 - (dusk - dawn).total_seconds() / 3600
+        daylight_hours = max(0, (dusk - dawn).total_seconds() / 3600)
+        night_hours = 24 - min(daylight_hours, 24)
         return night_hours + 1  # 1 hour safety buffer
     except ValueError:
         # Midnight sun or polar night — use 24h as safe max
