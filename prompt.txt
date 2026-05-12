@@ -344,3 +344,16 @@ A **Stop All** button shuts everything down. Live status badges show which servi
 - Thumbnails cleaned up alongside full images
 - Cancel button exits selection mode without deleting
 - All deletions logged to web_log.csv
+
+---
+
+**User**: What should the boot sequence be so that it opens automatically on boot when a user connects?
+
+**Claude**: Created `scripts/install_service.sh` — a one-time setup that registers `salmoncv-web` as a systemd service. Boot sequence:
+1. Pi powers on
+2. Networking starts (hostapd if hotspot is configured)
+3. `salmoncv-web` starts automatically on port 80 via systemd
+4. User connects to Wi-Fi, opens browser to Pi's IP — dashboard is ready
+
+Run once: `sudo bash scripts/install_service.sh`
+Then the dashboard starts on every boot. The user can hit "Start Counting" from the browser to launch camera, sensors, lights, and Starlink.
