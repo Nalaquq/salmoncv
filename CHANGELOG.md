@@ -34,6 +34,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Stop All** button to shut down all services at once
 - `/api/system/start`, `/api/system/stop`, `/api/system/running` endpoints for full system control
 - Live service status indicators on dashboard showing which services are running
+- **Monitor** page — estimated power draw table with color-coded bar (Pi, camera, lights, Starlink), case temperature/humidity health check, and interactive line charts for temperature, humidity, and pressure history with configurable data range
+- `/api/sensors/chart` endpoint returning arrays for chart rendering, `/api/power/draw` endpoint with estimated wattage per component
+- Gallery select mode: tap Select to enter selection mode, select individual images or Select All, then Delete to remove them. Confirmation dialog prevents accidental deletion. Thumbnails also cleaned up on delete.
 - `lights.py`: new lights scheduler module — defaults to civil twilight at Quinhagak, AK (59.75°N, 161.92°W), supports manual `--on-time`/`--off-time` overrides, `--dry-run` mode, handles midnight sun and polar night
 - `salmoncv-lights` CLI entry point
 - `astral` dependency for solar position calculations

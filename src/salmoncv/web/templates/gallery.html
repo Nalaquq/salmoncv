@@ -5,6 +5,16 @@
 
 <p id="galleryInfo">Loading...</p>
 
+<div class="gallery-toolbar" id="toolbar">
+  <button class="btn btn-sm" id="selectBtn" onclick="toggleSelectMode()">Select</button>
+  <span id="selectTools" style="display:none">
+    <button class="btn btn-sm" onclick="selectAll()">Select All</button>
+    <button class="btn btn-sm" onclick="selectNone()">Select None</button>
+    <button class="btn btn-sm btn-red" id="deleteBtn" onclick="deleteSelected()">Delete (0)</button>
+    <button class="btn btn-sm" onclick="cancelSelect()">Cancel</button>
+  </span>
+</div>
+
 <div class="gallery-grid" id="galleryGrid"></div>
 
 <div class="pagination" id="pagination"></div>
@@ -17,23 +27,93 @@
 {% block scripts %}
 <script>
 var currentPage = 1;
+var selectMode = false;
+var selected = {};
+var currentImages = [];
+
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  selected = {};
+  document.getElementById('selectTools').style.display = selectMode ? 'inline' : 'none';
+  document.getElementById('selectBtn').textContent = selectMode ? 'Selecting...' : 'Select';
+  updateDeleteCount();
+  renderGrid();
+}
+
+function cancelSelect() {
+  selectMode = false;
+  selected = {};
+  document.getElementById('selectTools').style.display = 'none';
+  document.getElementById('selectBtn').textContent = 'Select';
+  renderGrid();
+}
+
+function selectAll() {
+  currentImages.forEach(function(img) { selected[img.filename] = true; });
+  updateDeleteCount();
+  renderGrid();
+}
+
+function selectNone() {
+  selected = {};
+  updateDeleteCount();
+  renderGrid();
+}
+
+function updateDeleteCount() {
+  var count = Object.keys(selected).length;
+  document.getElementById('deleteBtn').textContent = 'Delete (' + count + ')';
+  document.getElementById('deleteBtn').disabled = count === 0;
+}
+
+function deleteSelected() {
+  var files = Object.keys(selected);
+  if (!files.length) return;
+  if (!confirm('Delete ' + files.length + ' image(s)? This cannot be undone.')) return;
+
+  scv.post('/api/gallery/delete', {filenames: files}, function(d) {
+    if (d.ok) {
+      selected = {};
+      updateDeleteCount();
+      loadGallery(currentPage);
+    }
+  });
+}
+
+function toggleSelect(filename) {
+  if (selected[filename]) delete selected[filename];
+  else selected[filename] = true;
+  updateDeleteCount();
+  renderGrid();
+}
+
+function renderGrid() {
+  var grid = document.getElementById('galleryGrid');
+  grid.innerHTML = '';
+  currentImages.forEach(function(img) {
+    var div = document.createElement('div');
+    div.className = 'gallery-item' + (selected[img.filename] ? ' gallery-selected' : '');
+
+    if (selectMode) {
+      div.onclick = function() { toggleSelect(img.filename); };
+      div.innerHTML = '<div class="gallery-check">' + (selected[img.filename] ? '&#10003;' : '') + '</div>' +
+        '<img src="/api/gallery/thumb/' + img.filename + '" alt="' + img.filename + '" loading="lazy">' +
+        '<span class="gallery-label">' + img.filename.replace('capture_', '').replace('.jpg', '') + '</span>';
+    } else {
+      div.innerHTML = '<img src="/api/gallery/thumb/' + img.filename + '" alt="' + img.filename +
+        '" onclick="openLightbox(\'' + img.filename + '\')" loading="lazy">' +
+        '<span class="gallery-label">' + img.filename.replace('capture_', '').replace('.jpg', '') + '</span>';
+    }
+    grid.appendChild(div);
+  });
+}
 
 function loadGallery(page) {
   currentPage = page;
   scv.get('/api/gallery?page=' + page, function(d) {
     scv.text('galleryInfo', d.total + ' images total — page ' + d.page + ' of ' + Math.max(d.pages, 1));
-
-    var grid = document.getElementById('galleryGrid');
-    grid.innerHTML = '';
-    d.images.forEach(function(img) {
-      var div = document.createElement('div');
-      div.className = 'gallery-item';
-      div.innerHTML = '<img src="/api/gallery/thumb/' + img.filename + '" alt="' + img.filename +
-        '" onclick="openLightbox(\'' + img.filename + '\')" loading="lazy">' +
-        '<span class="gallery-label">' + img.filename.replace('capture_', '').replace('.jpg', '') +
-        '</span>';
-      grid.appendChild(div);
-    });
+    currentImages = d.images;
+    renderGrid();
 
     var pag = document.getElementById('pagination');
     pag.innerHTML = '';

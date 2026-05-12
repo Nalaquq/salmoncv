@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Monitor{% endblock %}
+{% block content %}
+<h1>Monitor</h1>
+
+<div class="grid">
+  <div class="card">
+    <h2>Estimated Power Draw</h2>
+    <table class="table" id="powerTable">
+      <tbody>
+        <tr><td class="label">Raspberry Pi 5</td><td id="pwPi">5.0 W</td></tr>
+        <tr><td class="label">Samsung T9 SSD</td><td id="pwSsd">0.5 W</td></tr>
+        <tr><td class="label">Camera</td><td id="pwCam">--</td></tr>
+        <tr><td class="label">Sensor</td><td id="pwSens">--</td></tr>
+        <tr><td class="label">LED Lights</td><td id="pwLights">--</td></tr>
+        <tr><td class="label">Starlink</td><td id="pwSL">--</td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td class="label"><strong>Total</strong></td><td id="pwTotal"><strong>--</strong></td></tr>
+      </tfoot>
+    </table>
+    <div class="power-bar-wrap">
+      <div class="power-bar" id="powerBar" style="width:0%"></div>
+    </div>
+    <p class="muted" id="powerNote">Based on typical component ratings. Lights and Starlink are estimates — adjust in field.</p>
+  </div>
+
+  <div class="card">
+    <h2>System Health</h2>
+    <p><span class="label">CPU Temp:</span> <span id="cpuTemp">--</span></p>
+    <p><span class="label">Case Temp:</span> <span id="caseTemp">--</span></p>
+    <p><span class="label">Case Humidity:</span> <span id="caseHumid">--</span></p>
+    <p class="muted">High humidity inside the case may indicate a seal failure.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Temperature (inside case)</h2>
+  <canvas id="tempChart" height="200"></canvas>
+</div>
+
+<div class="card">
+  <h2>Humidity (inside case)</h2>
+  <canvas id="humidChart" height="200"></canvas>
+</div>
+
+<div class="card">
+  <h2>Barometric Pressure</h2>
+  <canvas id="pressChart" height="200"></canvas>
+</div>
+
+<div class="form-row" style="margin-top:1rem">
+  <label for="chartLimit">History points:</label>
+  <select id="chartLimit" class="input-sm" onchange="loadCharts()">
+    <option value="50">Last 50</option>
+    <option value="100">Last 100</option>
+    <option value="200" selected>Last 200</option>
+    <option value="500">Last 500</option>
+    <option value="1000">Last 1000</option>
+  </select>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function drawChart(canvasId, labels, data, color, unit, thresholds) {
+  var canvas = document.getElementById(canvasId);
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width = canvas.parentElement.clientWidth - 32;
+  var h = canvas.height = 200;
+  var pad = {top: 25, right: 10, bottom: 30, left: 55};
+  var cw = w - pad.left - pad.right;
+  var ch = h - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (!data.length) {
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('No data yet', w / 2 - 30, h / 2);
+    return;
+  }
+
+  var min = Math.min.apply(null, data);
+  var max = Math.max.apply(null, data);
+  var range = max - min || 1;
+  min -= range * 0.1;
+  max += range * 0.1;
+  range = max - min;
+
+  // Grid
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = '#6b7280';
+  for (var i = 0; i <= 4; i++) {
+    var y = pad.top + ch - (ch * i / 4);
+    var val = min + (range * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+    ctx.fillText(val.toFixed(1) + unit, 2, y + 4);
+  }
+
+  // Thresholds
+  if (thresholds) {
+    thresholds.forEach(function(t) {
+      if (t.value >= min && t.value <= max) {
+        var ty = pad.top + ch - ((t.value - min) / range * ch);
+        ctx.strokeStyle = t.color;
+        ctx.setLineDash([5, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, ty);
+        ctx.lineTo(w - pad.right, ty);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = t.color;
+        ctx.fillText(t.label, pad.left + 5, ty - 5);
+        ctx.fillStyle = '#6b7280';
+      }
+    });
+  }
+
+  // X labels
+  var step = Math.max(1, Math.floor(labels.length / 6));
+  for (var j = 0; j < labels.length; j += step) {
+    var x = pad.left + (j / (data.length - 1 || 1)) * cw;
+    var lbl = labels[j];
+    if (lbl.length > 10) lbl = lbl.substring(11, 16);
+    ctx.fillText(lbl, x - 15, h - 5);
+  }
+
+  // Line
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (var k = 0; k < data.length; k++) {
+    var px = pad.left + (k / (data.length - 1 || 1)) * cw;
+    var py = pad.top + ch - ((data[k] - min) / range * ch);
+    if (k === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Current value
+  if (data.length) {
+    var last = data[data.length - 1];
+    ctx.fillStyle = color;
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(last.toFixed(1) + unit, w - pad.right - 60, pad.top - 5);
+  }
+}
+
+function loadCharts() {
+  var limit = document.getElementById('chartLimit').value;
+  scv.get('/api/sensors/chart?limit=' + limit, function(d) {
+    drawChart('tempChart', d.timestamps, d.temperature_f, '#ef4444', '°F', [
+      {value: 100, color: '#ef4444', label: 'Hot (100°F)'},
+      {value: 32, color: '#3b82f6', label: 'Freezing'}
+    ]);
+    drawChart('humidChart', d.timestamps, d.humidity, '#3b82f6', '%', [
+      {value: 80, color: '#ef4444', label: 'High (80%)'}
+    ]);
+    drawChart('pressChart', d.timestamps, d.pressure, '#8b5cf6', ' hPa', []);
+  });
+}
+
+function refreshPowerDraw() {
+  scv.get('/api/power/draw', function(d) {
+    scv.text('pwPi', d.pi + ' W');
+    scv.text('pwSsd', d.ssd + ' W');
+    scv.text('pwCam', d.camera ? d.camera + ' W' : 'Off');
+    scv.text('pwSens', d.sensor ? d.sensor + ' W' : 'Off');
+    scv.text('pwLights', d.lights ? d.lights + ' W' : 'Off');
+    scv.text('pwSL', d.starlink ? d.starlink + ' W' : 'Off');
+    scv.text('pwTotal', d.total + ' W');
+
+    var maxW = 120;
+    var pct = Math.min(100, (d.total / maxW) * 100);
+    var bar = document.getElementById('powerBar');
+    bar.style.width = pct + '%';
+    bar.style.background = d.total > 80 ? '#ef4444' : d.total > 30 ? '#f59e0b' : '#16a34a';
+  });
+}
+
+function refreshHealth() {
+  scv.get('/api/system', function(d) {
+    scv.text('cpuTemp', d.cpu_temp_c ? d.cpu_temp_c + ' °C' : '--');
+  });
+  scv.get('/api/sensors/current', function(d) {
+    if (d.ok) {
+      scv.text('caseTemp', d.temperature_f + ' °F / ' + d.temperature_c + ' °C');
+      scv.text('caseHumid', d.humidity + '%');
+    } else {
+      scv.text('caseTemp', 'Unavailable');
+      scv.text('caseHumid', '--');
+    }
+  });
+}
+
+loadCharts();
+refreshPowerDraw();
+refreshHealth();
+setInterval(loadCharts, 30000);
+setInterval(refreshPowerDraw, 5000);
+setInterval(refreshHealth, 5000);
+
+window.addEventListener('resize', loadCharts);
+</script>
+{% endblock %}

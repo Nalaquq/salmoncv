@@ -309,3 +309,38 @@ Both schedulers run as background processes managed via PID files, same pattern 
 4. Starlink scheduler (uses saved config — auto or manual)
 
 A **Stop All** button shuts everything down. Live status badges show which services are running (Camera, Sensors, Lights, Starlink). Services that are already running are skipped rather than duplicated. Scheduler configs from the Power page are reused so the user only needs to configure once.
+
+---
+
+**User**: It would be cool if we had a section that estimates wattage draw and profiles some cool graphs of the environmental sensor (mounted inside the camera case). So we can see estimated draw and charts on temperature to make sure it's not getting too hot or wet. Like an admin board.
+
+**Claude**: Added a **Monitor** page to the nav bar with:
+
+**Power Draw Estimate:**
+- Table showing estimated watts per component: Pi 5 (5W), SSD (0.5W), camera (1.5W), lights (~50W), Starlink (~50W)
+- Color-coded power bar: green (<30W), yellow (30-80W), red (>80W)
+- Updates live based on which services and relays are active
+
+**Environmental Charts:**
+- Temperature (°F) with threshold lines for freezing (32°F) and hot (100°F)
+- Humidity (%) with high humidity warning line at 80%
+- Barometric pressure
+- All rendered as canvas line charts from sensor_log.csv history
+- Configurable history range: last 50, 100, 200, 500, or 1000 readings
+- Auto-refresh every 30 seconds, responsive to window resize
+
+**System Health:**
+- CPU temperature and case temperature side by side
+- Case humidity with warning about seal failure if high
+
+---
+
+**User**: It would be nice to select and delete individual photos in the gallery, or select all and delete.
+
+**Claude**: Added selection mode to the Gallery page:
+- **Select** button enters selection mode — tap images to select/deselect (blue highlight + checkmark)
+- **Select All** / **Select None** buttons for bulk selection
+- **Delete** button with count shows how many are selected, requires confirmation dialog before deleting
+- Thumbnails cleaned up alongside full images
+- Cancel button exits selection mode without deleting
+- All deletions logged to web_log.csv

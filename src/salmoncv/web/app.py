@@ -68,6 +68,10 @@ def create_app():
     def sensors():
         return render_template("sensors.html")
 
+    @app.route("/monitor")
+    def monitor():
+        return render_template("monitor.html")
+
     @app.route("/power")
     def power():
         return render_template("power.html")
@@ -248,6 +252,30 @@ def create_app():
 
         return send_from_directory(str(THUMB_DIR), filename)
 
+    @app.route("/api/gallery/delete", methods=["POST"])
+    def api_gallery_delete():
+        data = request.get_json(silent=True) or {}
+        filenames = data.get("filenames", [])
+        if not filenames:
+            return jsonify({"ok": False, "error": "No files specified"}), 400
+
+        capture_dir = get_capture_dir()
+        deleted = 0
+        for fn in filenames:
+            if "/" in fn or "\\" in fn or ".." in fn:
+                continue
+            img_path = capture_dir / fn
+            if img_path.exists():
+                img_path.unlink()
+                deleted += 1
+                thumb = THUMB_DIR / fn
+                if thumb.exists():
+                    thumb.unlink()
+
+        _log_request("/api/gallery/delete", "delete_images",
+                      f"{deleted} of {len(filenames)} files")
+        return jsonify({"ok": True, "deleted": deleted})
+
     # --- Sensors API ---
 
     @app.route("/api/sensors/current")
@@ -280,6 +308,68 @@ def create_app():
                 rows = reader[-limit:]
                 rows.reverse()
         return jsonify({"rows": rows})
+
+    @app.route("/api/sensors/chart")
+    def api_sensors_chart():
+        limit = request.args.get("limit", 200, type=int)
+        log_path = DATA_DIR / "sensor_log.csv"
+        timestamps, temp_c, temp_f, humidity, pressure = [], [], [], [], []
+        if log_path.exists():
+            with open(log_path, "r", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f))[-limit:]
+                for r in rows:
+                    timestamps.append(r.get("timestamp", ""))
+                    try:
+                        temp_c.append(float(r.get("temperature_c", 0)))
+                        temp_f.append(float(r.get("temperature_f", 0)))
+                        humidity.append(float(r.get("humidity", 0)))
+                        pressure.append(float(r.get("pressure_hpa", 0)))
+                    except (ValueError, TypeError):
+                        temp_c.append(0)
+                        temp_f.append(0)
+                        humidity.append(0)
+                        pressure.append(0)
+        return jsonify({
+            "timestamps": timestamps,
+            "temperature_c": temp_c,
+            "temperature_f": temp_f,
+            "humidity": humidity,
+            "pressure": pressure,
+        })
+
+    @app.route("/api/power/draw")
+    def api_power_draw():
+        draw = {"pi": 5.0, "ssd": 0.5}
+        total = draw["pi"] + draw["ssd"]
+
+        cam_running, _ = _pid_running(PID_FILE)
+        if cam_running:
+            draw["camera"] = 1.5
+            total += 1.5
+
+        sens_running, _ = _pid_running(SENSORS_PID)
+        if sens_running:
+            draw["sensor"] = 0.1
+            total += 0.1
+
+        from salmoncv.power import LIGHTS_STATE, STARLINK_STATE
+        if LIGHTS_STATE.exists():
+            try:
+                LIGHTS_STATE.read_text().strip()
+                draw["lights"] = 50.0
+                total += 50.0
+            except (ValueError, OSError):
+                pass
+        if STARLINK_STATE.exists():
+            try:
+                STARLINK_STATE.read_text().strip()
+                draw["starlink"] = 50.0
+                total += 50.0
+            except (ValueError, OSError):
+                pass
+
+        draw["total"] = round(total, 1)
+        return jsonify(draw)
 
     # --- Power API ---
 
