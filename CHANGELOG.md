@@ -20,6 +20,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `power.py`: fixed relay polarity — relay is active-high (drive high = ON, drive low = OFF)
 - `starlink.py`: new Starlink power scheduler — calculates upload window from new image count and estimated bandwidth (5 Mbps default), tracks uploaded images via manifest, supports `--on-time`/`--upload-time` manual overrides, CSV event logging, `--dry-run` mode
 - `starlink.py`: daily admin window (default 12:00 PM, 15 min) for SSH access and pushing updates; disable with `--admin-time off`
+- `watchdog.py`: safety watchdog that enforces max on-durations — lights max = night duration + 1h buffer (calculated daily from civil twilight), Starlink max = 3 hours. Forces relays off and logs to `~/salmoncv/data/watchdog_log.csv`
+- `salmoncv-watchdog` CLI entry point
+- `power.py`: state files (`.lights_on_since`, `.starlink_on_since`) written/cleared on every relay toggle for watchdog tracking
 - `salmoncv-starlink` CLI entry point
 - `lights.py`: CSV log at `~/salmoncv/data/lights_log.csv` tracking every on/off event, schedule changes, scheduler start/stop, and midnight sun events
 - Added `README.md` with project overview, quick start, command reference, and project structure

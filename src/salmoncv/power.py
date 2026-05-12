@@ -3,34 +3,53 @@
 import argparse
 import subprocess
 import time
+from datetime import datetime
+from pathlib import Path
 
 LIGHTS_PIN = 17
 STARLINK_PIN = 27
 
+STATE_DIR = Path.home() / "salmoncv" / "data"
+LIGHTS_STATE = STATE_DIR / ".lights_on_since"
+STARLINK_STATE = STATE_DIR / ".starlink_on_since"
+
 
 def _set_pin(pin, active):
-    # Active-high relay: ON = drive high, OFF = drive low
     level = "dh" if active else "dl"
     subprocess.run(["pinctrl", "set", str(pin), "op", level], check=True)
 
 
+def _write_state(state_file):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state_file.write_text(datetime.now().isoformat())
+
+
+def _clear_state(state_file):
+    if state_file.exists():
+        state_file.unlink()
+
+
 def lights_on():
     _set_pin(LIGHTS_PIN, True)
+    _write_state(LIGHTS_STATE)
     print("Lights ON")
 
 
 def lights_off():
     _set_pin(LIGHTS_PIN, False)
+    _clear_state(LIGHTS_STATE)
     print("Lights OFF")
 
 
 def starlink_on():
     _set_pin(STARLINK_PIN, True)
+    _write_state(STARLINK_STATE)
     print("Starlink ON")
 
 
 def starlink_off():
     _set_pin(STARLINK_PIN, False)
+    _clear_state(STARLINK_STATE)
     print("Starlink OFF")
 
 

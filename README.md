@@ -63,6 +63,7 @@ See the full usage guide: [docs/usage-guide.md](docs/usage-guide.md)
 | `salmoncv-starlink` | Schedule Starlink power based on upload needs or custom times |
 | `salmoncv-sensors` | Log BME280 environmental data to CSV |
 | `salmoncv-power` | Turn lights and Starlink on or off |
+| `salmoncv-watchdog` | Safety check — force off relays that exceed max duration |
 | `salmoncv-probe` | Test GPIO pins to identify relay wiring |
 
 ## Project Structure

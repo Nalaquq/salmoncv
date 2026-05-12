@@ -187,3 +187,15 @@ Updated docs/usage-guide.md and README.md with Starlink section.
 **User**: We should also add a short daily admin window so we can push updates and monitor settings.
 
 **Claude**: Added `--admin-time` (default 12:00 PM) and `--admin-duration` (default 15 min) to the Starlink scheduler. Powers on daily at the set time for SSH access, code pushes, and settings checks — independent of the upload calculation. Logged as `admin_open`/`admin_close` events. Disable with `--admin-time off`.
+
+---
+
+**User**: Could lights or Starlink accidentally get stuck on and drain the battery? How do we troubleshoot?
+
+**Claude**: Yes — if a scheduler crashes while a relay is on, `pinctrl` keeps the state and the relay stays on. Pi reboots are safe (GPIO resets to LOW = relays OFF), but app crashes and killed tmux sessions are dangerous.
+
+Built three layers of protection:
+1. **State files** in `power.py` — every relay toggle writes/clears a timestamp file (`.lights_on_since`, `.starlink_on_since`) in `~/salmoncv/data/`
+2. **Watchdog** (`salmoncv-watchdog`) — checks state files and forces relays off if they exceed max duration. Lights max = night duration + 1h buffer (calculated from civil twilight). Starlink max = 3 hours. Logs forced shutoffs to `~/salmoncv/data/watchdog_log.csv`.
+3. **Cron job** — run watchdog every 15 minutes automatically:
+   `*/15 * * * * /home/nalaquq/salmoncv/venv/bin/salmoncv-watchdog`

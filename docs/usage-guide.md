@@ -353,6 +353,57 @@ sleep 180 && salmoncv-power lights-on && sleep 60 && salmoncv-power lights-off
 
 ---
 
+## Watchdog
+
+The watchdog is a safety check that prevents lights or Starlink from draining the battery if the scheduler crashes or someone forgets to turn a relay off.
+
+It enforces two rules:
+
+- **Lights**: cannot stay on longer than the night duration plus a 1-hour buffer (calculated daily from civil twilight for Quinhagak)
+- **Starlink**: cannot stay on longer than 3 hours
+
+### Run manually
+
+```bash
+salmoncv-watchdog
+```
+
+This checks both relays and forces them off if they have been on too long.
+
+### Set up automatic checks with cron
+
+To run the watchdog every 15 minutes automatically, add a cron entry:
+
+```bash
+crontab -e
+```
+
+Add this line:
+
+```
+*/15 * * * * /home/nalaquq/salmoncv/venv/bin/salmoncv-watchdog >> /home/nalaquq/salmoncv/data/watchdog_cron.log 2>&1
+```
+
+Save and exit. The watchdog will now run every 15 minutes in the background.
+
+### What happens when the watchdog forces a relay off
+
+It logs the event to `~/salmoncv/data/watchdog_log.csv` with the relay name and how long it was on. You can review this file to see if anything went wrong.
+
+### When does the watchdog help?
+
+- Scheduler crashes while a relay is on
+- You run `salmoncv-power starlink-on` and forget to turn it off
+- The tmux session dies during an upload window
+- Any unexpected situation where a relay stays on too long
+
+### When does the watchdog NOT help?
+
+- The Pi reboots — GPIO pins reset to LOW automatically, so relays turn off on their own
+- The Pi loses power completely — no power means no relay
+
+---
+
 ## GPIO Probe
 
 If you are wiring a new relay board and need to figure out which GPIO pin controls which relay, use the probe tool:
@@ -534,6 +585,9 @@ salmoncv-power lights-off
 salmoncv-power starlink-on
 salmoncv-power starlink-off
 salmoncv-power test
+
+# Watchdog (run manually or via cron)
+salmoncv-watchdog                        # check and enforce max durations
 
 # Background sessions
 tmux new -s camera    # start session
