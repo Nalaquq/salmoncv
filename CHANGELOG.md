@@ -9,6 +9,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- MkDocs documentation site with Material theme — 17 pages covering every component, setup guides, troubleshooting, and reference docs
+- GitHub Actions workflow (`.github/workflows/docs.yml`) for automatic deployment to GitHub Pages on push to main
+- `docs_site/` directory with all documentation source files
+- `mkdocs.yml` configuration with Material theme, dark mode toggle, search, and code copy
+
 - Flask web dashboard (`src/salmoncv/web/`) — mobile-first browser UI accessible from phone or tablet over Wi-Fi
   - Dashboard page: at-a-glance status for camera, sensors, lights, Starlink, and system
   - Camera page: single capture with live preview, time-lapse start/stop with configurable interval and resolution

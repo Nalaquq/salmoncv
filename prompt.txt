@@ -357,3 +357,19 @@ A **Stop All** button shuts everything down. Live status badges show which servi
 
 Run once: `sudo bash scripts/install_service.sh`
 Then the dashboard starts on every boot. The user can hit "Start Counting" from the browser to launch camera, sensors, lights, and Starlink.
+
+---
+
+**User**: Is there a good way to organize and host these docs so they look more like official documentation on a website?
+
+**Claude**: Set up MkDocs with Material theme for GitHub Pages. Created:
+- `mkdocs.yml` — full config with Material theme, dark/light mode, teal/deep orange palette, search, code copy
+- `docs_site/` — 17 documentation pages:
+  - Home (index.md), Getting Started, Pi Setup, Coral TPU Setup
+  - Web Dashboard, Camera, Lights, Starlink, Sensors, Power & Watchdog
+  - Wi-Fi Hotspot, Auto-Start on Boot, Storage
+  - Troubleshooting
+  - Technical Design, Development Log, Changelog
+- `.github/workflows/docs.yml` — GitHub Actions workflow that auto-builds and deploys to GitHub Pages on every push to main
+
+To enable: go to GitHub repo → Settings → Pages → Source = "GitHub Actions". After the next push, docs will be live at https://nalaquq.github.io/salmoncv/
