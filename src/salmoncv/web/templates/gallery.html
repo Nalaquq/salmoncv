@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Gallery{% endblock %}
+{% block content %}
+<h1>Gallery</h1>
+
+<p id="galleryInfo">Loading...</p>
+
+<div class="gallery-grid" id="galleryGrid"></div>
+
+<div class="pagination" id="pagination"></div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lbImg" alt="Full size image">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var currentPage = 1;
+
+function loadGallery(page) {
+  currentPage = page;
+  scv.get('/api/gallery?page=' + page, function(d) {
+    scv.text('galleryInfo', d.total + ' images total — page ' + d.page + ' of ' + Math.max(d.pages, 1));
+
+    var grid = document.getElementById('galleryGrid');
+    grid.innerHTML = '';
+    d.images.forEach(function(img) {
+      var div = document.createElement('div');
+      div.className = 'gallery-item';
+      div.innerHTML = '<img src="/api/gallery/thumb/' + img.filename + '" alt="' + img.filename +
+        '" onclick="openLightbox(\'' + img.filename + '\')" loading="lazy">' +
+        '<span class="gallery-label">' + img.filename.replace('capture_', '').replace('.jpg', '') +
+        '</span>';
+      grid.appendChild(div);
+    });
+
+    var pag = document.getElementById('pagination');
+    pag.innerHTML = '';
+    if (d.pages > 1) {
+      if (page > 1) pag.innerHTML += '<button class="btn btn-sm" onclick="loadGallery(' + (page - 1) + ')">Prev</button> ';
+      pag.innerHTML += '<span>Page ' + page + ' / ' + d.pages + '</span> ';
+      if (page < d.pages) pag.innerHTML += '<button class="btn btn-sm" onclick="loadGallery(' + (page + 1) + ')">Next</button>';
+    }
+  });
+}
+
+function openLightbox(filename) {
+  document.getElementById('lbImg').src = '/api/gallery/' + filename;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+loadGallery(1);
+</script>
+{% endblock %}

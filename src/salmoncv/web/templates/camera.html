@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Camera{% endblock %}
+{% block content %}
+<h1>Camera</h1>
+
+<div class="card">
+  <h2>Quick Capture</h2>
+  <p>Take a single photo and preview it here.</p>
+  <button class="btn" id="captureBtn" onclick="capture()">Capture Photo</button>
+  <p id="captureMsg" class="msg"></p>
+  <div id="previewWrap" class="preview-wrap" style="display:none">
+    <img id="previewImg" class="preview-img" alt="Captured image">
+  </div>
+</div>
+
+<div class="card">
+  <h2>Time-Lapse</h2>
+  <p id="tlStatus"><span class="label">Status:</span> <span id="tlState" class="badge badge-off">--</span></p>
+  <p><span class="label">Images today:</span> <span id="tlToday">--</span></p>
+  <p><span class="label">Total:</span> <span id="tlTotal">--</span></p>
+
+  <div class="form-row">
+    <label for="tlInterval">Interval (sec):</label>
+    <input type="number" id="tlInterval" value="3" min="1" max="3600" class="input-sm">
+  </div>
+  <div class="form-row">
+    <label for="tlWidth">Width:</label>
+    <input type="number" id="tlWidth" value="4056" min="640" max="4056" class="input-sm">
+  </div>
+  <div class="form-row">
+    <label for="tlHeight">Height:</label>
+    <input type="number" id="tlHeight" value="3040" min="480" max="3040" class="input-sm">
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-green" id="startBtn" onclick="startTL()">Start</button>
+    <button class="btn btn-red" id="stopBtn" onclick="stopTL()" disabled>Stop</button>
+  </div>
+  <p id="tlMsg" class="msg"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function capture() {
+  var btn = document.getElementById('captureBtn');
+  btn.disabled = true;
+  btn.textContent = 'Capturing...';
+  scv.text('captureMsg', '');
+
+  scv.post('/api/camera/capture', {}, function(d) {
+    btn.disabled = false;
+    btn.textContent = 'Capture Photo';
+    if (d.ok) {
+      scv.text('captureMsg', 'Saved: ' + d.filename);
+      document.getElementById('previewImg').src = '/api/gallery/' + d.filename + '?t=' + Date.now();
+      document.getElementById('previewWrap').style.display = 'block';
+      refreshStatus();
+    } else {
+      scv.text('captureMsg', 'Error: ' + d.error);
+    }
+  });
+}
+
+function startTL() {
+  var body = {
+    interval: parseInt(document.getElementById('tlInterval').value) || 3,
+    width: parseInt(document.getElementById('tlWidth').value) || 4056,
+    height: parseInt(document.getElementById('tlHeight').value) || 3040
+  };
+  scv.post('/api/camera/start', body, function(d) {
+    scv.text('tlMsg', d.ok ? 'Started (PID ' + d.pid + ')' : 'Error: ' + d.error);
+    refreshStatus();
+  });
+}
+
+function stopTL() {
+  scv.post('/api/camera/stop', {}, function(d) {
+    scv.text('tlMsg', d.ok ? 'Stopped' : 'Error: ' + d.error);
+    refreshStatus();
+  });
+}
+
+function refreshStatus() {
+  scv.get('/api/camera/status', function(d) {
+    scv.text('tlState', d.running ? 'Running' : 'Stopped');
+    scv.badge('tlState', d.running);
+    scv.text('tlToday', d.today_images);
+    scv.text('tlTotal', d.total_images);
+    document.getElementById('startBtn').disabled = d.running;
+    document.getElementById('stopBtn').disabled = !d.running;
+  });
+}
+
+refreshStatus();
+setInterval(refreshStatus, 5000);
+</script>
+{% endblock %}

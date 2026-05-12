@@ -555,6 +555,56 @@ This shows all running tmux sessions. If a session is missing, the service insid
 
 ---
 
+## Web Dashboard
+
+The web dashboard lets you control everything from a phone or tablet browser — no terminal needed.
+
+### Start the dashboard
+
+```bash
+sudo salmoncv-web
+```
+
+This starts the web server on port 80. Open a browser and go to the Pi's IP address (e.g., `http://192.168.4.1` if using the hotspot, or `http://nalaquqpi.local` on local Wi-Fi).
+
+### Development mode
+
+```bash
+salmoncv-web --port 5000 --debug
+```
+
+### Dashboard pages
+
+| Page | What it shows |
+|------|---------------|
+| **Dashboard** | At-a-glance status of camera, sensors, lights, Starlink, and system |
+| **Camera** | Take a single photo with live preview, start/stop time-lapse, set interval and resolution |
+| **Gallery** | Browse captured images as thumbnails, click to view full size |
+| **Sensors** | Live temperature, humidity, and pressure readings (updates every 5 seconds), history table |
+| **Power** | Toggle lights and Starlink on/off, view schedules, check upload queue |
+| **Settings** | System info (hostname, uptime, CPU temp), disk usage, download log files |
+
+### Wi-Fi hotspot
+
+To let field users connect directly to the Pi without an existing Wi-Fi network, set up the hotspot:
+
+```bash
+sudo bash scripts/setup_hotspot.sh
+sudo reboot
+```
+
+After reboot, connect your phone to the **SalmonCV** Wi-Fi network, then open `http://192.168.4.1` in a browser.
+
+See [hotspot-setup.md](hotspot-setup.md) for full details.
+
+### Run in the background
+
+```bash
+tmux new -d -s web 'sudo salmoncv-web'
+```
+
+---
+
 ## Quick Reference Card
 
 ```

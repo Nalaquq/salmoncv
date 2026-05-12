@@ -7,6 +7,7 @@ captures/
 salmon_captures/
 .env
 data/
+*.pdf
 dist/
 build/
 *.egg-info/

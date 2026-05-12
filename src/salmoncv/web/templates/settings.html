@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Settings{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+
+<div class="card">
+  <h2>System Info</h2>
+  <table class="table">
+    <tbody>
+      <tr><td class="label">Hostname</td><td id="sysHost">--</td></tr>
+      <tr><td class="label">Uptime</td><td id="sysUptime">--</td></tr>
+      <tr><td class="label">CPU Temp</td><td id="sysCpu">--</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Storage</h2>
+  <table class="table">
+    <tbody>
+      <tr><td class="label">Disk Total</td><td id="diskTotal">--</td></tr>
+      <tr><td class="label">Disk Used</td><td id="diskUsed">--</td></tr>
+      <tr><td class="label">Disk Free</td><td id="diskFree">--</td></tr>
+      <tr><td class="label">Usage</td><td id="diskPct">--</td></tr>
+      <tr><td class="label">Images</td><td id="imgCount">--</td></tr>
+    </tbody>
+  </table>
+  <div class="progress-bar">
+    <div class="progress-fill" id="diskBar" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Log Files</h2>
+  <ul class="log-list">
+    <li><a href="/api/logs/sensor_log.csv" download>sensor_log.csv</a> — Environmental readings</li>
+    <li><a href="/api/logs/lights_log.csv" download>lights_log.csv</a> — Light schedule events</li>
+    <li><a href="/api/logs/starlink_log.csv" download>starlink_log.csv</a> — Starlink power events</li>
+    <li><a href="/api/logs/watchdog_log.csv" download>watchdog_log.csv</a> — Watchdog actions</li>
+    <li><a href="/api/logs/capture_log.csv" download>capture_log.csv</a> — Camera capture metadata</li>
+  </ul>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshSystem() {
+  scv.get('/api/system', function(d) {
+    scv.text('sysHost', d.hostname);
+    scv.text('sysUptime', d.uptime || '--');
+    scv.text('sysCpu', d.cpu_temp_c ? d.cpu_temp_c + ' °C' : '--');
+    scv.text('diskTotal', d.disk_total_gb + ' GB');
+    scv.text('diskUsed', d.disk_used_gb + ' GB');
+    scv.text('diskFree', d.disk_free_gb + ' GB');
+    scv.text('diskPct', d.disk_percent + '%');
+    scv.text('imgCount', d.image_count);
+    document.getElementById('diskBar').style.width = d.disk_percent + '%';
+  });
+}
+
+refreshSystem();
+setInterval(refreshSystem, 10000);
+</script>
+{% endblock %}

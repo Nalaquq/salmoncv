@@ -199,3 +199,39 @@ Built three layers of protection:
 2. **Watchdog** (`salmoncv-watchdog`) — checks state files and forces relays off if they exceed max duration. Lights max = night duration + 1h buffer (calculated from civil twilight). Starlink max = 3 hours. Logs forced shutoffs to `~/salmoncv/data/watchdog_log.csv`.
 3. **Cron job** — run watchdog every 15 minutes automatically:
    `*/15 * * * * /home/nalaquq/salmoncv/venv/bin/salmoncv-watchdog`
+
+---
+
+**User**: Would it be a good idea to let the user log into the Pi by broadcasting a static IP so they can connect to the device? We could make a Flask app with camera controls, logs, uploads, and monitoring — an app instead of a terminal.
+
+**Claude**: Yes — this is exactly how the Parrot Sequoia sensor works (connect to device Wi-Fi, open browser at static IP). The Pi 5 can broadcast its own Wi-Fi hotspot while staying connected to Starlink.
+
+**User**: Yes let's plan it out and document the plan very well. I've added a PDF of the Sequoia sensor as a reference for UX.
+
+**Claude**: Reviewed the Sequoia user guide and created a detailed implementation plan covering:
+
+1. **Wi-Fi hotspot** — `hostapd` + `dnsmasq` broadcasting SSID "SalmonCV" at `192.168.4.1`, running alongside existing Wi-Fi
+2. **Flask web dashboard** — 6 pages modeled on the Sequoia UX:
+   - Dashboard: at-a-glance status for all subsystems
+   - Camera: single capture with preview, time-lapse start/stop, resolution settings
+   - Gallery: thumbnail grid with full-size lightbox, pagination
+   - Sensors: live BME280 readings (auto-refresh 5s), history table, CSV download
+   - Power: toggle lights/Starlink, view schedules, upload queue status
+   - Settings: system info, disk usage, log file downloads
+
+Design: mobile-first, vanilla HTML/CSS/JS, no CDN dependencies, all assets served locally.
+
+Built the complete implementation:
+- `src/salmoncv/web/app.py` — Flask app with all routes and REST API endpoints
+- `src/salmoncv/web/templates/` — 7 HTML templates (base, dashboard, camera, gallery, sensors, power, settings)
+- `src/salmoncv/web/static/style.css` — Mobile-first responsive CSS
+- `src/salmoncv/web/static/salmoncv.js` — Shared AJAX utilities and nav toggle
+- `scripts/setup_hotspot.sh` — One-time Wi-Fi AP setup script
+- `docs/hotspot-setup.md` — Non-expert hotspot guide with troubleshooting
+- Added `flask` dependency and `salmoncv-web` entry point to `pyproject.toml`
+- Updated README.md, docs/usage-guide.md, and CHANGELOG.md
+
+Usage:
+- Development: `salmoncv-web --port 5000 --debug`
+- Production: `sudo salmoncv-web` (port 80)
+- With hotspot: `sudo bash scripts/setup_hotspot.sh && sudo reboot`, then connect phone to "SalmonCV" Wi-Fi and open `http://192.168.4.1`

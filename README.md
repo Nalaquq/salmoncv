@@ -64,6 +64,7 @@ See the full usage guide: [docs/usage-guide.md](docs/usage-guide.md)
 | `salmoncv-sensors` | Log BME280 environmental data to CSV |
 | `salmoncv-power` | Turn lights and Starlink on or off |
 | `salmoncv-watchdog` | Safety check — force off relays that exceed max duration |
+| `salmoncv-web` | Start the web dashboard (default port 80) |
 | `salmoncv-probe` | Test GPIO pins to identify relay wiring |
 
 ## Project Structure
@@ -75,7 +76,8 @@ salmoncv/
 │   ├── lights.py       Sunset/sunrise light scheduling
 │   ├── sensors.py      BME280 environmental logging
 │   ├── power.py        Relay control (lights, Starlink)
-│   └── gpio_probe.py   GPIO pin testing utility
+│   ├── gpio_probe.py   GPIO pin testing utility
+│   └── web/            Flask web dashboard
 ├── docs/               Setup guides and design documents
 ├── scripts/            Shell utilities
 ├── tests/              Test suite (placeholder)
@@ -83,6 +85,17 @@ salmoncv/
 ├── data/               Sensor and capture logs (gitignored)
 └── pyproject.toml      Package configuration
 ```
+
+## Web Dashboard
+
+Access the full dashboard from a phone or tablet — no SSH required.
+
+```bash
+sudo salmoncv-web          # start on port 80
+salmoncv-web --port 5000   # development mode
+```
+
+Set up the Wi-Fi hotspot so field users can connect directly: [docs/hotspot-setup.md](docs/hotspot-setup.md)
 
 ## Setup From Scratch
 

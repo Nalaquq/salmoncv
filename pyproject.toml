@@ -15,6 +15,7 @@ dependencies = [
     "RPi.bme280",
     "smbus2",
     "astral",
+    "flask",
 ]
 
 [project.scripts]
@@ -25,3 +26,4 @@ salmoncv-probe = "salmoncv.gpio_probe:main"
 salmoncv-lights = "salmoncv.lights:main"
 salmoncv-starlink = "salmoncv.starlink:main"
 salmoncv-watchdog = "salmoncv.watchdog:main"
+salmoncv-web = "salmoncv.web.app:main"

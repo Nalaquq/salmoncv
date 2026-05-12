@@ -9,6 +9,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Flask web dashboard (`src/salmoncv/web/`) — mobile-first browser UI accessible from phone or tablet over Wi-Fi
+  - Dashboard page: at-a-glance status for camera, sensors, lights, Starlink, and system
+  - Camera page: single capture with live preview, time-lapse start/stop with configurable interval and resolution
+  - Gallery page: paginated thumbnail grid with full-size lightbox viewer
+  - Sensors page: live BME280 readings (auto-refresh every 5s), recent history table, CSV download
+  - Power page: toggle lights and Starlink on/off, view relay state and elapsed time, light schedule (dawn/dusk), Starlink upload queue
+  - Settings page: hostname, uptime, CPU temp, disk usage with progress bar, log file downloads
+- `salmoncv-web` CLI entry point (default port 80, `--host`, `--port`, `--debug`)
+- `flask` dependency in pyproject.toml
+- REST API: `/api/camera/*`, `/api/gallery/*`, `/api/sensors/*`, `/api/power/*`, `/api/schedule/*`, `/api/system`, `/api/logs/*`
+- `scripts/setup_hotspot.sh` — one-time Wi-Fi hotspot setup (SSID: SalmonCV, IP: 192.168.4.1)
+- `docs/hotspot-setup.md` — non-expert hotspot setup and troubleshooting guide
 - `lights.py`: new lights scheduler module — defaults to civil twilight at Quinhagak, AK (59.75°N, 161.92°W), supports manual `--on-time`/`--off-time` overrides, `--dry-run` mode, handles midnight sun and polar night
 - `salmoncv-lights` CLI entry point
 - `astral` dependency for solar position calculations

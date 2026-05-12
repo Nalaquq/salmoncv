@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Sensors{% endblock %}
+{% block content %}
+<h1>Sensors</h1>
+
+<div class="card">
+  <h2>Current Readings</h2>
+  <div class="readings" id="currentReadings">
+    <div class="reading">
+      <span class="reading-value" id="tempVal">--</span>
+      <span class="reading-unit">Temperature</span>
+    </div>
+    <div class="reading">
+      <span class="reading-value" id="humidVal">--</span>
+      <span class="reading-unit">Humidity</span>
+    </div>
+    <div class="reading">
+      <span class="reading-value" id="pressVal">--</span>
+      <span class="reading-unit">Pressure</span>
+    </div>
+  </div>
+  <p id="sensorMsg" class="msg"></p>
+  <p class="muted" id="sensorTime">Last update: --</p>
+</div>
+
+<div class="card">
+  <h2>Recent History</h2>
+  <div class="table-wrap">
+    <table class="table" id="historyTable">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Temp (°F)</th>
+          <th>Temp (°C)</th>
+          <th>Humidity (%)</th>
+          <th>Pressure (hPa)</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="5">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <a href="/api/logs/sensor_log.csv" class="btn btn-sm" download>Download CSV</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshSensors() {
+  scv.get('/api/sensors/current', function(d) {
+    if (d.ok) {
+      scv.text('tempVal', d.temperature_f + '°F / ' + d.temperature_c + '°C');
+      scv.text('humidVal', d.humidity + '%');
+      scv.text('pressVal', d.pressure_hpa + ' hPa');
+      scv.text('sensorTime', 'Last update: ' + d.timestamp);
+      scv.text('sensorMsg', '');
+    } else {
+      scv.text('sensorMsg', 'Sensor not available');
+    }
+  });
+}
+
+function loadHistory() {
+  scv.get('/api/sensors/history?limit=50', function(d) {
+    var tbody = document.getElementById('historyBody');
+    if (!d.rows || d.rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5">No data yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = '';
+    d.rows.forEach(function(r) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + (r.timestamp || '') + '</td>' +
+        '<td>' + (r.temperature_f || '') + '</td>' +
+        '<td>' + (r.temperature_c || '') + '</td>' +
+        '<td>' + (r.humidity || '') + '</td>' +
+        '<td>' + (r.pressure_hpa || '') + '</td>';
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+refreshSensors();
+loadHistory();
+setInterval(refreshSensors, 5000);
+setInterval(loadHistory, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Power{% endblock %}
+{% block content %}
+<h1>Power</h1>
+
+<div class="grid">
+  <div class="card">
+    <h2>Lights</h2>
+    <p><span class="label">Status:</span> <span id="lightsStatus" class="badge badge-off">--</span></p>
+    <p><span class="label">On since:</span> <span id="lightsSince">--</span></p>
+    <p><span class="label">Elapsed:</span> <span id="lightsElapsed">--</span></p>
+    <div class="btn-group">
+      <button class="btn btn-green" onclick="togglePower('lights','on')">Lights ON</button>
+      <button class="btn btn-red" onclick="togglePower('lights','off')">Lights OFF</button>
+    </div>
+    <p id="lightsMsg" class="msg"></p>
+  </div>
+
+  <div class="card">
+    <h2>Starlink</h2>
+    <p><span class="label">Status:</span> <span id="slStatus" class="badge badge-off">--</span></p>
+    <p><span class="label">On since:</span> <span id="slSince">--</span></p>
+    <p><span class="label">Elapsed:</span> <span id="slElapsed">--</span></p>
+    <div class="btn-group">
+      <button class="btn btn-green" onclick="togglePower('starlink','on')">Starlink ON</button>
+      <button class="btn btn-red" onclick="togglePower('starlink','off')">Starlink OFF</button>
+    </div>
+    <p id="slMsg" class="msg"></p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Light Schedule</h2>
+  <p><span class="label">Dawn:</span> <span id="schedDawn">--</span></p>
+  <p><span class="label">Dusk:</span> <span id="schedDusk">--</span></p>
+  <p class="muted">Lights turn on at dusk, off at dawn (civil twilight for Quinhagak, AK).</p>
+</div>
+
+<div class="card">
+  <h2>Starlink Upload Queue</h2>
+  <p><span class="label">Pending images:</span> <span id="slPending">--</span></p>
+  <p><span class="label">Pending size:</span> <span id="slSize">--</span></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePower(device, action) {
+  var url = '/api/power/' + device;
+  var msgId = device === 'lights' ? 'lightsMsg' : 'slMsg';
+  scv.post(url, {action: action}, function(d) {
+    scv.text(msgId, d.ok ? device + ' turned ' + action : 'Error: ' + d.error);
+    refreshPower();
+  });
+}
+
+function refreshPower() {
+  scv.get('/api/power/status', function(d) {
+    scv.text('lightsStatus', d.lights.on ? 'ON' : 'OFF');
+    scv.badge('lightsStatus', d.lights.on);
+    scv.text('lightsSince', d.lights.since || '--');
+    scv.text('lightsElapsed', d.lights.on ? d.lights.elapsed_min + ' min' : '--');
+
+    scv.text('slStatus', d.starlink.on ? 'ON' : 'OFF');
+    scv.badge('slStatus', d.starlink.on);
+    scv.text('slSince', d.starlink.since || '--');
+    scv.text('slElapsed', d.starlink.on ? d.starlink.elapsed_min + ' min' : '--');
+  });
+
+  scv.get('/api/schedule/lights', function(d) {
+    if (d.ok) {
+      scv.text('schedDawn', d.dawn);
+      scv.text('schedDusk', d.dusk);
+    } else {
+      scv.text('schedDawn', 'Unavailable');
+      scv.text('schedDusk', 'Unavailable');
+    }
+  });
+
+  scv.get('/api/schedule/starlink', function(d) {
+    if (d.ok) {
+      scv.text('slPending', d.pending_images + ' images');
+      scv.text('slSize', d.pending_mb + ' MB');
+    } else {
+      scv.text('slPending', 'Unavailable');
+      scv.text('slSize', '--');
+    }
+  });
+}
+
+refreshPower();
+setInterval(refreshPower, 5000);
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="grid">
+  <div class="card" id="cameraCard">
+    <h2>Camera</h2>
+    <p><span class="label">Status:</span> <span id="camStatus" class="badge badge-off">--</span></p>
+    <p><span class="label">Today:</span> <span id="camToday">--</span> images</p>
+    <p><span class="label">Total:</span> <span id="camTotal">--</span> images</p>
+    <p><span class="label">Last capture:</span> <span id="camLast">--</span></p>
+    <a href="/camera" class="btn btn-sm">Open Camera</a>
+  </div>
+
+  <div class="card" id="sensorCard">
+    <h2>Sensors</h2>
+    <p><span class="label">Temp:</span> <span id="sensorTemp">--</span></p>
+    <p><span class="label">Humidity:</span> <span id="sensorHumid">--</span></p>
+    <p><span class="label">Pressure:</span> <span id="sensorPress">--</span></p>
+    <a href="/sensors" class="btn btn-sm">View History</a>
+  </div>
+
+  <div class="card" id="lightsCard">
+    <h2>Lights</h2>
+    <p><span class="label">Status:</span> <span id="lightsStatus" class="badge badge-off">--</span></p>
+    <p><span class="label">On since:</span> <span id="lightsSince">--</span></p>
+    <a href="/power" class="btn btn-sm">Control Power</a>
+  </div>
+
+  <div class="card" id="starlinkCard">
+    <h2>Starlink</h2>
+    <p><span class="label">Status:</span> <span id="slStatus" class="badge badge-off">--</span></p>
+    <p><span class="label">On since:</span> <span id="slSince">--</span></p>
+    <a href="/power" class="btn btn-sm">Control Power</a>
+  </div>
+
+  <div class="card" id="systemCard">
+    <h2>System</h2>
+    <p><span class="label">Uptime:</span> <span id="sysUptime">--</span></p>
+    <p><span class="label">CPU temp:</span> <span id="sysCpu">--</span></p>
+    <p><span class="label">Disk:</span> <span id="sysDisk">--</span></p>
+    <a href="/settings" class="btn btn-sm">Settings</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshDashboard() {
+  scv.get('/api/camera/status', function(d) {
+    scv.text('camStatus', d.running ? 'Running' : 'Stopped');
+    scv.badge('camStatus', d.running);
+    scv.text('camToday', d.today_images);
+    scv.text('camTotal', d.total_images);
+    scv.text('camLast', d.last_capture || 'None');
+  });
+
+  scv.get('/api/sensors/current', function(d) {
+    if (d.ok) {
+      scv.text('sensorTemp', d.temperature_f + ' °F / ' + d.temperature_c + ' °C');
+      scv.text('sensorHumid', d.humidity + ' %');
+      scv.text('sensorPress', d.pressure_hpa + ' hPa');
+    } else {
+      scv.text('sensorTemp', 'Unavailable');
+      scv.text('sensorHumid', '--');
+      scv.text('sensorPress', '--');
+    }
+  });
+
+  scv.get('/api/power/status', function(d) {
+    scv.text('lightsStatus', d.lights.on ? 'ON' : 'OFF');
+    scv.badge('lightsStatus', d.lights.on);
+    scv.text('lightsSince', d.lights.on ? d.lights.elapsed_min + ' min' : '--');
+
+    scv.text('slStatus', d.starlink.on ? 'ON' : 'OFF');
+    scv.badge('slStatus', d.starlink.on);
+    scv.text('slSince', d.starlink.on ? d.starlink.elapsed_min + ' min' : '--');
+  });
+
+  scv.get('/api/system', function(d) {
+    scv.text('sysUptime', d.uptime || '--');
+    scv.text('sysCpu', d.cpu_temp_c ? d.cpu_temp_c + ' °C' : '--');
+    scv.text('sysDisk', d.disk_used_gb + ' / ' + d.disk_total_gb + ' GB (' + d.disk_percent + '%)');
+  });
+}
+
+refreshDashboard();
+setInterval(refreshDashboard, 5000);
+</script>
+{% endblock %}

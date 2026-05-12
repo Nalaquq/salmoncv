@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SalmonCV{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-brand">SalmonCV</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu">&#9776;</button>
+    <div class="nav-links" id="navLinks">
+      <a href="/" class="{% if request.path == '/' %}active{% endif %}">Dashboard</a>
+      <a href="/camera" class="{% if request.path == '/camera' %}active{% endif %}">Camera</a>
+      <a href="/gallery" class="{% if request.path == '/gallery' %}active{% endif %}">Gallery</a>
+      <a href="/sensors" class="{% if request.path == '/sensors' %}active{% endif %}">Sensors</a>
+      <a href="/power" class="{% if request.path == '/power' %}active{% endif %}">Power</a>
+      <a href="/settings" class="{% if request.path == '/settings' %}active{% endif %}">Settings</a>
+    </div>
+  </nav>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/salmoncv.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
