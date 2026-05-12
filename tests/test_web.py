@@ -53,6 +53,15 @@ def client(tmp_path):
         yield c
 
 
+class TestVenvBin:
+    def test_venv_bin_resolves_to_directory(self):
+        assert web_module.VENV_BIN.is_dir()
+
+    def test_venv_bin_matches_running_python(self):
+        import sys
+        assert str(web_module.VENV_BIN) == str(Path(sys.executable).parent)
+
+
 class TestPageRoutes:
     def test_dashboard(self, client):
         r = client.get("/")
@@ -127,6 +136,16 @@ class TestCameraAPI:
         data = r.get_json()
         assert data["ok"] is True
         assert data["pid"] == 12345
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_start_timelapse_uses_venv_path(self, mock_popen, client, tmp_path):
+        mock_proc = MagicMock()
+        mock_proc.pid = 12345
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/camera/start", json={})
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[0] == str(web_module.VENV_BIN / "salmoncv-camera")
 
     @patch("salmoncv.web.app.subprocess.Popen")
     def test_start_refuses_when_already_running(self, mock_popen, client, tmp_path):
@@ -313,6 +332,31 @@ class TestSchedulerAPI:
         assert data["mode"] == "auto"
         assert data["upload_speed"] == 5.0
 
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_lights_start_uses_venv_path(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 11111
+        mock_popen.return_value = mock_proc
+
+        r = client.post("/api/scheduler/lights/start", json={"mode": "auto"})
+        data = r.get_json()
+        assert data["ok"] is True
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[0] == str(web_module.VENV_BIN / "salmoncv-lights")
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_starlink_start_uses_venv_path(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 22222
+        mock_popen.return_value = mock_proc
+
+        r = client.post("/api/scheduler/starlink/start",
+                        json={"mode": "auto", "upload_speed": 5.0})
+        data = r.get_json()
+        assert data["ok"] is True
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[0] == str(web_module.VENV_BIN / "salmoncv-starlink")
+
     def test_lights_stop_when_not_running(self, client):
         r = client.post("/api/scheduler/lights/stop")
         data = r.get_json()
@@ -322,6 +366,47 @@ class TestSchedulerAPI:
         r = client.post("/api/scheduler/starlink/stop")
         data = r.get_json()
         assert data["ok"] is False
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_lights_start_stop_roundtrip(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 33333
+        mock_popen.return_value = mock_proc
+
+        r = client.post("/api/scheduler/lights/start", json={"mode": "auto"})
+        assert r.get_json()["ok"] is True
+
+        with patch("os.kill"):
+            r = client.post("/api/scheduler/lights/stop")
+            assert r.get_json()["ok"] is True
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_lights_start_saves_config(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 44444
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/scheduler/lights/start",
+                    json={"mode": "manual", "on_time": "20:00", "off_time": "06:00"})
+        conf = json.loads(web_module.LIGHTS_CONF.read_text())
+        assert conf["mode"] == "manual"
+        assert conf["on_time"] == "20:00"
+        assert conf["off_time"] == "06:00"
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_starlink_start_saves_config(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 55555
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/scheduler/starlink/start",
+                    json={"mode": "manual", "on_time": "14:00",
+                          "upload_time": "30", "upload_speed": 10.0,
+                          "admin_time": "off", "admin_duration": 20})
+        conf = json.loads(web_module.STARLINK_CONF.read_text())
+        assert conf["mode"] == "manual"
+        assert conf["upload_speed"] == 10.0
+        assert conf["admin_time"] == "off"
 
 
 class TestSystemAPI:
@@ -342,6 +427,98 @@ class TestSystemAPI:
         r = client.post("/api/system/stop")
         data = r.get_json()
         assert data["ok"] is True
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_start_launches_all_services(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10001
+        mock_popen.return_value = mock_proc
+
+        r = client.post("/api/system/start",
+                        json={"camera_interval": 5, "sensor_interval": 60})
+        data = r.get_json()
+        assert data["ok"] is True
+        results = data["results"]
+        assert results["camera"]["started"] is True
+        assert results["sensors"]["started"] is True
+        assert results["lights"]["started"] is True
+        assert results["starlink"]["started"] is True
+        assert mock_popen.call_count == 4
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_start_uses_venv_paths(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10002
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start", json={})
+        venv_bin = str(web_module.VENV_BIN)
+        for call in mock_popen.call_args_list:
+            cmd = call[0][0]
+            assert cmd[0].startswith(venv_bin), (
+                f"Expected {cmd[0]} to start with {venv_bin}"
+            )
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_start_saves_config(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10003
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start",
+                    json={"camera_interval": 10, "sensor_interval": 120})
+        conf = json.loads(web_module.SYSTEM_CONF.read_text())
+        assert conf["camera_interval"] == 10
+        assert conf["sensor_interval"] == 120
+        assert "started_at" in conf
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_start_skips_already_running(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10004
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start", json={})
+
+        with patch("os.kill"):
+            r = client.post("/api/system/start", json={})
+            results = r.get_json()["results"]
+            assert results["camera"]["started"] is False
+            assert results["camera"]["reason"] == "already running"
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_start_then_stop(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10005
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start", json={})
+
+        with patch("os.kill"):
+            r = client.post("/api/system/stop")
+            data = r.get_json()
+            assert data["ok"] is True
+
+        r = client.get("/api/system/running")
+        data = r.get_json()
+        assert data["any_running"] is False
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_start_then_running_shows_all(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10006
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start", json={})
+
+        with patch("os.kill"):
+            r = client.get("/api/system/running")
+            data = r.get_json()
+            assert data["all_running"] is True
+            assert data["camera"] is True
+            assert data["sensors"] is True
+            assert data["lights"] is True
+            assert data["starlink"] is True
 
 
 class TestLogsAPI:
