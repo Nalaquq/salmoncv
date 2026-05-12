@@ -10,23 +10,42 @@
       <tr><td class="label">Hostname</td><td id="sysHost">--</td></tr>
       <tr><td class="label">Uptime</td><td id="sysUptime">--</td></tr>
       <tr><td class="label">CPU Temp</td><td id="sysCpu">--</td></tr>
+      <tr><td class="label">Active Storage</td><td id="storageDrive">--</td></tr>
+      <tr><td class="label">Images</td><td id="imgCount">--</td></tr>
     </tbody>
   </table>
 </div>
 
 <div class="card">
-  <h2>Storage</h2>
+  <h2>Samsung T9 (Primary)</h2>
+  <div id="t9Info">
+    <table class="table">
+      <tbody>
+        <tr><td class="label">Status</td><td id="t9Status">--</td></tr>
+        <tr><td class="label">Total</td><td id="t9Total">--</td></tr>
+        <tr><td class="label">Used</td><td id="t9Used">--</td></tr>
+        <tr><td class="label">Free</td><td id="t9Free">--</td></tr>
+        <tr><td class="label">Usage</td><td id="t9Pct">--</td></tr>
+      </tbody>
+    </table>
+    <div class="progress-bar">
+      <div class="progress-fill" id="t9Bar" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>SD Card (Fallback)</h2>
   <table class="table">
     <tbody>
-      <tr><td class="label">Disk Total</td><td id="diskTotal">--</td></tr>
-      <tr><td class="label">Disk Used</td><td id="diskUsed">--</td></tr>
-      <tr><td class="label">Disk Free</td><td id="diskFree">--</td></tr>
-      <tr><td class="label">Usage</td><td id="diskPct">--</td></tr>
-      <tr><td class="label">Images</td><td id="imgCount">--</td></tr>
+      <tr><td class="label">Total</td><td id="sdTotal">--</td></tr>
+      <tr><td class="label">Used</td><td id="sdUsed">--</td></tr>
+      <tr><td class="label">Free</td><td id="sdFree">--</td></tr>
+      <tr><td class="label">Usage</td><td id="sdPct">--</td></tr>
     </tbody>
   </table>
   <div class="progress-bar">
-    <div class="progress-fill" id="diskBar" style="width:0%"></div>
+    <div class="progress-fill" id="sdBar" style="width:0%"></div>
   </div>
 </div>
 
@@ -50,12 +69,29 @@ function refreshSystem() {
     scv.text('sysHost', d.hostname);
     scv.text('sysUptime', d.uptime || '--');
     scv.text('sysCpu', d.cpu_temp_c ? d.cpu_temp_c + ' °C' : '--');
-    scv.text('diskTotal', d.disk_total_gb + ' GB');
-    scv.text('diskUsed', d.disk_used_gb + ' GB');
-    scv.text('diskFree', d.disk_free_gb + ' GB');
-    scv.text('diskPct', d.disk_percent + '%');
+    scv.text('storageDrive', d.storage_drive);
     scv.text('imgCount', d.image_count);
-    document.getElementById('diskBar').style.width = d.disk_percent + '%';
+
+    scv.text('sdTotal', d.sd_total_gb + ' GB');
+    scv.text('sdUsed', d.sd_used_gb + ' GB');
+    scv.text('sdFree', d.sd_free_gb + ' GB');
+    scv.text('sdPct', d.sd_percent + '%');
+    document.getElementById('sdBar').style.width = d.sd_percent + '%';
+
+    if (d.t9_available && d.t9_total_gb) {
+      scv.text('t9Status', 'Connected');
+      scv.text('t9Total', d.t9_total_gb + ' GB');
+      scv.text('t9Used', d.t9_used_gb + ' GB');
+      scv.text('t9Free', d.t9_free_gb + ' GB');
+      scv.text('t9Pct', d.t9_percent + '%');
+      document.getElementById('t9Bar').style.width = d.t9_percent + '%';
+    } else {
+      scv.text('t9Status', 'Not detected — using SD card');
+      scv.text('t9Total', '--');
+      scv.text('t9Used', '--');
+      scv.text('t9Free', '--');
+      scv.text('t9Pct', '--');
+    }
   });
 }
 

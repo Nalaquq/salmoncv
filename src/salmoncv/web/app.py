@@ -15,8 +15,8 @@ from flask import (
     Flask, render_template, jsonify, request, send_file, send_from_directory,
 )
 
-CAPTURE_DIR = Path.home() / "salmoncv" / "captures"
-DATA_DIR = Path.home() / "salmoncv" / "data"
+from salmoncv.storage import get_capture_dir, get_storage_info, DATA_DIR
+
 THUMB_DIR = DATA_DIR / "thumbs"
 PID_FILE = DATA_DIR / ".camera_pid"
 WEB_LOG = DATA_DIR / "web_log.csv"
@@ -73,9 +73,9 @@ def create_app():
 
     @app.route("/api/camera/capture", methods=["POST"])
     def api_camera_capture():
-        CAPTURE_DIR.mkdir(parents=True, exist_ok=True)
+        capture_dir = get_capture_dir()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        image_path = CAPTURE_DIR / f"capture_{timestamp}.jpg"
+        image_path = capture_dir / f"capture_{timestamp}.jpg"
         data = request.get_json(silent=True) or {}
         shutter = data.get("shutter", 0)
         gain = data.get("gain", 0)
@@ -123,7 +123,7 @@ def create_app():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         cmd = [
             "salmoncv-camera", "--no-inference",
-            "--outdir", str(CAPTURE_DIR),
+            "--outdir", str(get_capture_dir()),
             "--interval", str(interval),
             "--width", str(width),
             "--height", str(height),
@@ -167,7 +167,8 @@ def create_app():
             except (OSError, ValueError):
                 PID_FILE.unlink(missing_ok=True)
 
-        images = sorted(CAPTURE_DIR.glob("*.jpg")) if CAPTURE_DIR.exists() else []
+        capture_dir = get_capture_dir()
+        images = sorted(capture_dir.glob("*.jpg")) if capture_dir.exists() else []
         today = datetime.now().strftime("%Y%m%d")
         today_count = sum(1 for img in images if today in img.name)
 
@@ -175,11 +176,13 @@ def create_app():
         if images:
             last_capture = images[-1].name
 
+        info = get_storage_info()
         return jsonify({
             "running": running,
             "total_images": len(images),
             "today_images": today_count,
             "last_capture": last_capture,
+            "storage_drive": info["drive"],
         })
 
     # --- Gallery API ---
@@ -189,9 +192,10 @@ def create_app():
         page = request.args.get("page", 1, type=int)
         per_page = 50
 
+        capture_dir = get_capture_dir()
         images = sorted(
-            CAPTURE_DIR.glob("*.jpg"), reverse=True
-        ) if CAPTURE_DIR.exists() else []
+            capture_dir.glob("*.jpg"), reverse=True
+        ) if capture_dir.exists() else []
 
         total = len(images)
         start = (page - 1) * per_page
@@ -215,7 +219,7 @@ def create_app():
 
     @app.route("/api/gallery/<filename>")
     def api_gallery_image(filename):
-        return send_from_directory(str(CAPTURE_DIR), filename)
+        return send_from_directory(str(get_capture_dir()), filename)
 
     @app.route("/api/gallery/thumb/<filename>")
     def api_gallery_thumb(filename):
@@ -223,7 +227,8 @@ def create_app():
         thumb_path = THUMB_DIR / filename
 
         if not thumb_path.exists():
-            source = CAPTURE_DIR / filename
+            capture_dir = get_capture_dir()
+            source = capture_dir / filename
             if not source.exists():
                 return "Not found", 404
             try:
@@ -232,7 +237,7 @@ def create_app():
                 img.thumbnail((300, 300))
                 img.save(thumb_path, "JPEG", quality=70)
             except Exception:
-                return send_from_directory(str(CAPTURE_DIR), filename)
+                return send_from_directory(str(capture_dir), filename)
 
         return send_from_directory(str(THUMB_DIR), filename)
 
@@ -344,7 +349,7 @@ def create_app():
     def api_schedule_starlink():
         try:
             from salmoncv.starlink import get_new_images, DEFAULT_MANIFEST
-            new = get_new_images(CAPTURE_DIR, DEFAULT_MANIFEST)
+            new = get_new_images(get_capture_dir(), DEFAULT_MANIFEST)
             total_mb = sum(img.stat().st_size for img in new) / (1024 * 1024)
             return jsonify({
                 "ok": True,
@@ -358,7 +363,7 @@ def create_app():
 
     @app.route("/api/system")
     def api_system():
-        disk = shutil.disk_usage(str(Path.home()))
+        sd_disk = shutil.disk_usage(str(Path.home()))
         uptime = ""
         cpu_temp = ""
         try:
@@ -372,18 +377,35 @@ def create_app():
         except Exception:
             pass
 
-        image_count = len(list(CAPTURE_DIR.glob("*.jpg"))) if CAPTURE_DIR.exists() else 0
+        info = get_storage_info()
+        capture_dir = get_capture_dir()
+        image_count = len(list(capture_dir.glob("*.jpg"))) if capture_dir.exists() else 0
 
-        return jsonify({
+        result = {
             "hostname": platform.node(),
             "uptime": uptime,
             "cpu_temp_c": cpu_temp,
-            "disk_total_gb": round(disk.total / (1024 ** 3), 1),
-            "disk_used_gb": round(disk.used / (1024 ** 3), 1),
-            "disk_free_gb": round(disk.free / (1024 ** 3), 1),
-            "disk_percent": round(disk.used / disk.total * 100, 1),
+            "sd_total_gb": round(sd_disk.total / (1024 ** 3), 1),
+            "sd_used_gb": round(sd_disk.used / (1024 ** 3), 1),
+            "sd_free_gb": round(sd_disk.free / (1024 ** 3), 1),
+            "sd_percent": round(sd_disk.used / sd_disk.total * 100, 1),
             "image_count": image_count,
-        })
+            "storage_drive": info["drive"],
+            "t9_available": info["t9_available"],
+        }
+
+        t9_mount = Path("/media/nalaquq/T9")
+        if t9_mount.exists():
+            try:
+                t9_disk = shutil.disk_usage(str(t9_mount))
+                result["t9_total_gb"] = round(t9_disk.total / (1024 ** 3), 1)
+                result["t9_used_gb"] = round(t9_disk.used / (1024 ** 3), 1)
+                result["t9_free_gb"] = round(t9_disk.free / (1024 ** 3), 1)
+                result["t9_percent"] = round(t9_disk.used / t9_disk.total * 100, 1)
+            except OSError:
+                pass
+
+        return jsonify(result)
 
     @app.route("/api/logs/<logname>")
     def api_logs(logname):
@@ -395,7 +417,7 @@ def create_app():
             return "Not found", 404
         log_path = DATA_DIR / logname
         if logname == "capture_log.csv":
-            log_path = CAPTURE_DIR / logname
+            log_path = get_capture_dir() / logname
         if not log_path.exists():
             return "Not found", 404
         return send_file(str(log_path), mimetype="text/csv",

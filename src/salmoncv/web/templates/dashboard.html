@@ -10,6 +10,7 @@
     <p><span class="label">Today:</span> <span id="camToday">--</span> images</p>
     <p><span class="label">Total:</span> <span id="camTotal">--</span> images</p>
     <p><span class="label">Last capture:</span> <span id="camLast">--</span></p>
+    <p><span class="label">Storage:</span> <span id="camDrive">--</span></p>
     <a href="/camera" class="btn btn-sm">Open Camera</a>
   </div>
 
@@ -54,6 +55,7 @@ function refreshDashboard() {
     scv.text('camToday', d.today_images);
     scv.text('camTotal', d.total_images);
     scv.text('camLast', d.last_capture || 'None');
+    scv.text('camDrive', d.storage_drive || '--');
   });
 
   scv.get('/api/sensors/current', function(d) {

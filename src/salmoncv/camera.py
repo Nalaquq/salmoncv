@@ -63,7 +63,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default=None)
     parser.add_argument("--labels", default=None)
-    parser.add_argument("--outdir", default="captures")
+    parser.add_argument("--outdir", default=None)
     parser.add_argument("--interval", type=float, default=3.0)
     parser.add_argument("--camera-command", default="rpicam-still")
     parser.add_argument("--width", type=int, default=4056)
@@ -99,8 +99,14 @@ def main():
     if run_inference and not args.model:
         parser.error("--model is required unless --no-inference is set")
 
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    if args.outdir:
+        outdir = Path(args.outdir)
+        outdir.mkdir(parents=True, exist_ok=True)
+    else:
+        from salmoncv.storage import get_capture_dir, get_storage_info
+        outdir = get_capture_dir()
+        info = get_storage_info()
+        print(f"Storage: {info['drive']} → {outdir}")
 
     # --- Capture log (always written) ---
     capture_log_path = outdir / "capture_log.csv"

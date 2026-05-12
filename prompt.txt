@@ -253,3 +253,17 @@ Usage:
 - **Exposure compensation** — +/- stops to brighten or darken
 
 Available in both the CLI (`--shutter`, `--gain`, `--awb`, `--ev`) and the web dashboard Camera page. Default is auto mode — all parameters handled by the camera. Toggle to manual to set individual values. Settings apply to both single capture and time-lapse.
+
+---
+
+**User**: I have a Samsung T9 hard drive in this system. I'd prefer to store image files on it and only use the SD card if the Samsung is full, not detected, or corrupted.
+
+**Claude**: Added `storage.py` module with automatic drive selection:
+- **Primary**: Samsung T9 at `/media/nalaquq/T9/salmoncv/captures/` (932GB)
+- **Fallback**: SD card at `~/salmoncv/captures/` (238GB)
+- Checks T9 on every capture: is it mounted? writable? >100MB free?
+- If any check fails, silently falls back to SD card — camera never stops
+- Camera CLI with no `--outdir` uses the smart storage; explicit `--outdir` overrides it
+- Web dashboard shows active drive on dashboard and camera pages
+- Settings page shows both T9 and SD Card with usage stats and progress bars
+- All web API endpoints use dynamic capture dir (gallery, thumbnails, Starlink queue, logs)
