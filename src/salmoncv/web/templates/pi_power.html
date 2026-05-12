@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}SalmonCV — Pi Power{% endblock %}
+{% block content %}
+<h1>Pi Power</h1>
+
+<div class="card">
+  <h2>Raspberry Pi Status</h2>
+  <p><span class="label">Status:</span> <span id="piStatus" class="badge badge-on">Running</span></p>
+  <p><span class="label">Hostname:</span> <span id="piHost">--</span></p>
+  <p><span class="label">Booted at:</span> <span id="piBoot">--</span></p>
+  <p><span class="label">Uptime:</span> <span id="piUptime">--</span></p>
+  <p><span class="label">CPU temp:</span> <span id="piCpu">--</span></p>
+</div>
+
+<div class="card">
+  <h2>Power Controls</h2>
+  <p class="muted">Shutdown stops the Pi completely. Reboot restarts it. Once shut down, you must press the physical power button on the Pi to turn it back on.</p>
+  <div class="btn-group" style="margin-top:1rem">
+    <button class="btn btn-red" id="shutdownBtn" onclick="piShutdown()">Shut Down Pi</button>
+    <button class="btn btn-orange" id="rebootBtn" onclick="piReboot()">Reboot Pi</button>
+  </div>
+  <p id="piMsg" class="msg"></p>
+</div>
+
+<div id="confirmOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center">
+  <div class="card" style="max-width:400px;text-align:center">
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <p id="confirmText"></p>
+    <div class="btn-group" style="justify-content:center;margin-top:1rem">
+      <button class="btn btn-red" id="confirmYes">Yes</button>
+      <button class="btn" id="confirmNo" onclick="hideConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshPiStatus() {
+  scv.get('/api/pi/status', function(d) {
+    scv.text('piHost', d.hostname || '--');
+    scv.text('piBoot', d.boot_time || '--');
+    scv.text('piUptime', d.uptime || '--');
+    scv.text('piCpu', d.cpu_temp_c ? d.cpu_temp_c + ' °C' : '--');
+  });
+}
+
+function showConfirm(title, text, onYes) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmText').textContent = text;
+  var overlay = document.getElementById('confirmOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('confirmYes').onclick = function() {
+    hideConfirm();
+    onYes();
+  };
+}
+
+function hideConfirm() {
+  document.getElementById('confirmOverlay').style.display = 'none';
+}
+
+function piShutdown() {
+  showConfirm('Shut Down Pi?',
+    'The Pi will power off. You will need to press the physical power button to turn it back on.',
+    function() {
+      document.getElementById('shutdownBtn').disabled = true;
+      document.getElementById('rebootBtn').disabled = true;
+      scv.post('/api/pi/shutdown', {}, function(d) {
+        if (d.ok) {
+          scv.text('piMsg', 'Shutting down... The dashboard will become unreachable.');
+          scv.text('piStatus', 'Shutting down');
+          document.getElementById('piStatus').className = 'badge badge-off';
+        } else {
+          scv.text('piMsg', 'Error: ' + d.error);
+          document.getElementById('shutdownBtn').disabled = false;
+          document.getElementById('rebootBtn').disabled = false;
+        }
+      });
+    }
+  );
+}
+
+function piReboot() {
+  showConfirm('Reboot Pi?',
+    'The Pi will restart. The dashboard will be unavailable for about a minute.',
+    function() {
+      document.getElementById('shutdownBtn').disabled = true;
+      document.getElementById('rebootBtn').disabled = true;
+      scv.post('/api/pi/reboot', {}, function(d) {
+        if (d.ok) {
+          scv.text('piMsg', 'Rebooting... Refresh this page in about a minute.');
+          scv.text('piStatus', 'Rebooting');
+          document.getElementById('piStatus').className = 'badge badge-off';
+        } else {
+          scv.text('piMsg', 'Error: ' + d.error);
+          document.getElementById('shutdownBtn').disabled = false;
+          document.getElementById('rebootBtn').disabled = false;
+        }
+      });
+    }
+  );
+}
+
+refreshPiStatus();
+setInterval(refreshPiStatus, 10000);
+</script>
+{% endblock %}

@@ -8,7 +8,7 @@ import shutil
 import signal
 import subprocess
 import platform
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 
@@ -86,6 +86,10 @@ def create_app():
     @app.route("/settings")
     def settings():
         return render_template("settings.html")
+
+    @app.route("/pi-power")
+    def pi_power():
+        return render_template("pi_power.html")
 
     # --- Camera API ---
 
@@ -832,6 +836,62 @@ def create_app():
             return "Not found", 404
         return send_file(str(log_path), mimetype="text/csv",
                          as_attachment=True, download_name=logname)
+
+    # --- Pi Power Management ---
+
+    @app.route("/api/pi/status")
+    def api_pi_status():
+        uptime_sec = 0
+        boot_time = None
+        try:
+            uptime_sec = float(Path("/proc/uptime").read_text().split()[0])
+            boot_dt = datetime.now() - timedelta(seconds=uptime_sec)
+            boot_time = boot_dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            pass
+
+        days = int(uptime_sec // 86400)
+        hours = int((uptime_sec % 86400) // 3600)
+        mins = int((uptime_sec % 3600) // 60)
+        if days > 0:
+            uptime_str = f"{days}d {hours}h {mins}m"
+        elif hours > 0:
+            uptime_str = f"{hours}h {mins}m"
+        else:
+            uptime_str = f"{mins}m"
+
+        cpu_temp = ""
+        try:
+            temp = Path("/sys/class/thermal/thermal_zone0/temp").read_text().strip()
+            cpu_temp = f"{int(temp) / 1000:.1f}"
+        except Exception:
+            pass
+
+        return jsonify({
+            "hostname": platform.node(),
+            "uptime": uptime_str,
+            "uptime_sec": uptime_sec,
+            "boot_time": boot_time,
+            "cpu_temp_c": cpu_temp,
+        })
+
+    @app.route("/api/pi/shutdown", methods=["POST"])
+    def api_pi_shutdown():
+        _log_request("/api/pi/shutdown", "pi_shutdown")
+        try:
+            subprocess.Popen(["sudo", "shutdown", "-h", "now"])
+            return jsonify({"ok": True, "message": "Shutting down..."})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    @app.route("/api/pi/reboot", methods=["POST"])
+    def api_pi_reboot():
+        _log_request("/api/pi/reboot", "pi_reboot")
+        try:
+            subprocess.Popen(["sudo", "reboot"])
+            return jsonify({"ok": True, "message": "Rebooting..."})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
 
     return app
 

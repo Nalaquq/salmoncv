@@ -135,6 +135,7 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--muted); }
 .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 .btn-green { background: var(--green); }
 .btn-red { background: var(--red); }
+.btn-orange { background: var(--orange); }
 .btn-active { background: var(--text); }
 .btn-lg { padding: 0.75rem 2rem; font-size: 1.1rem; }
 

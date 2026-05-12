@@ -158,6 +158,17 @@ See [Storage Troubleshooting](storage.md#troubleshooting).
 
 ## General
 
+### How to shut down or reboot the Pi
+
+Use the **Pi Power** page in the dashboard. Click **Shut Down Pi** or **Reboot Pi** and confirm. After a shutdown, you must press the physical power button on the Pi to turn it back on.
+
+From the command line:
+
+```bash
+sudo shutdown -h now   # power off
+sudo reboot            # restart
+```
+
 ### How to restart everything
 
 ```bash

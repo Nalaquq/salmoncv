@@ -419,3 +419,9 @@ Created `scripts/revert_hotspot.sh` as the revert engine. Updated docs to recomm
 **User**: "Stop All" stops camera captures but doesn't turn off the lights and Starlink relays.
 
 **Claude**: The `/api/system/stop` endpoint only killed scheduler PIDs but never called `lights_off()` / `starlink_off()`. Added relay shutoff: after stopping all scheduler processes, the endpoint now checks if relay state files exist and calls the corresponding off functions to de-energize the GPIO pins. Added a test that writes state files, calls stop, and verifies both are removed. Updated docs (web-dashboard.md, troubleshooting.md) to reflect that Stop All also turns off relays. Total: 105 tests passing.
+
+---
+
+**User**: Add a Pi Power page to shut down and reboot the Pi from the web UI instead of pressing the physical button.
+
+**Claude**: Added `/pi-power` page with status card (hostname, boot time, uptime, CPU temp) and two action buttons: "Shut Down Pi" (`sudo shutdown -h now`) and "Reboot Pi" (`sudo reboot`). Both require a confirmation dialog. Note: once shut down, the Pi must be powered on via the physical button — there's no way to send a "turn on" command to an off device. API endpoints: `GET /api/pi/status`, `POST /api/pi/shutdown`, `POST /api/pi/reboot`. Added 8 tests (page render, status, shutdown, reboot, errors, activity logging). Updated web-dashboard.md, troubleshooting.md, and CHANGELOG. Total: 113 tests passing.

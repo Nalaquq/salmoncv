@@ -616,6 +616,68 @@ class TestLogsAPI:
         assert r.status_code == 404
 
 
+class TestPiPowerAPI:
+    def test_pi_power_page(self, client):
+        r = client.get("/pi-power")
+        assert r.status_code == 200
+        assert b"Pi Power" in r.data
+
+    def test_pi_status(self, client):
+        r = client.get("/api/pi/status")
+        data = r.get_json()
+        assert "hostname" in data
+        assert "uptime" in data
+        assert "boot_time" in data
+        assert "cpu_temp_c" in data
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_pi_shutdown(self, mock_popen, client):
+        r = client.post("/api/pi/shutdown")
+        data = r.get_json()
+        assert data["ok"] is True
+        assert "Shutting down" in data["message"]
+        mock_popen.assert_called_once_with(["sudo", "shutdown", "-h", "now"])
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_pi_reboot(self, mock_popen, client):
+        r = client.post("/api/pi/reboot")
+        data = r.get_json()
+        assert data["ok"] is True
+        assert "Rebooting" in data["message"]
+        mock_popen.assert_called_once_with(["sudo", "reboot"])
+
+    @patch("salmoncv.web.app.subprocess.Popen", side_effect=Exception("permission denied"))
+    def test_pi_shutdown_error(self, mock_popen, client):
+        r = client.post("/api/pi/shutdown")
+        assert r.status_code == 500
+        data = r.get_json()
+        assert data["ok"] is False
+        assert "permission denied" in data["error"]
+
+    @patch("salmoncv.web.app.subprocess.Popen", side_effect=Exception("permission denied"))
+    def test_pi_reboot_error(self, mock_popen, client):
+        r = client.post("/api/pi/reboot")
+        assert r.status_code == 500
+        data = r.get_json()
+        assert data["ok"] is False
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_pi_shutdown_logs_activity(self, mock_popen, client):
+        client.post("/api/pi/shutdown")
+        log = web_module.WEB_LOG
+        assert log.exists()
+        content = log.read_text()
+        assert "pi_shutdown" in content
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_pi_reboot_logs_activity(self, mock_popen, client):
+        client.post("/api/pi/reboot")
+        log = web_module.WEB_LOG
+        assert log.exists()
+        content = log.read_text()
+        assert "pi_reboot" in content
+
+
 class TestWebLog:
     @patch("salmoncv.web.app.subprocess.run")
     def test_capture_logs_activity(self, mock_run, client, tmp_path):

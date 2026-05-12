@@ -15,6 +15,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `scripts/revert_hotspot.sh` — reverts all hotspot changes, restoring default networking
 - `setup_hotspot.sh` rewritten with `--dry-run`, `--safe`, and `--revert` flags for safe remote setup over SSH
 
+- Pi Power page (`/pi-power`) — shut down or reboot the Raspberry Pi from the dashboard with confirmation dialogs. Shows hostname, boot time, uptime, and CPU temperature.
+
 ### Fixed
 - **Start Counting broken after boot**: subprocess calls used bare command names (`salmoncv-camera`, etc.) which weren't on PATH when Flask ran via systemd. Now uses full venv binary paths resolved at runtime via `sys.executable`.
 - **Dashboard showed both relays as "on" when only one was energized**: `/api/system/running` only checked scheduler PID files, not actual relay state. Now returns separate `lights_relay` and `starlink_relay` fields that check the GPIO state files. Dashboard distinguishes "Sched" (scheduler running) from relay "ON/OFF".

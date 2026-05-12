@@ -69,12 +69,20 @@ The main landing page with:
 - Active storage drive and capture directory
 - Download all log files (sensor, lights, Starlink, watchdog, capture, web activity)
 
+### Pi Power
+
+- **Status card** --- hostname, boot time, uptime, and CPU temperature
+- **Shut Down Pi** --- powers off the Raspberry Pi completely (requires pressing the physical power button to turn it back on)
+- **Reboot Pi** --- restarts the Raspberry Pi (the dashboard will be available again in about a minute)
+- Both actions require a confirmation dialog before executing
+
 ## Activity Logging
 
 Every action taken through the dashboard is logged to `~/salmoncv/data/web_log.csv`:
 
 - Photo captures and time-lapse start/stop
 - Power toggles (lights, Starlink)
+- Pi shutdown and reboot
 - Scheduler start/stop
 - Storage mode changes
 - Image deletions
