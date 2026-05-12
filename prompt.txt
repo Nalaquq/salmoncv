@@ -181,3 +181,9 @@ Existing docs kept as-is — they serve as developer reference and project histo
 - Note: manages power window only — actual file upload script is a future feature
 
 Updated docs/usage-guide.md and README.md with Starlink section.
+
+---
+
+**User**: We should also add a short daily admin window so we can push updates and monitor settings.
+
+**Claude**: Added `--admin-time` (default 12:00 PM) and `--admin-duration` (default 15 min) to the Starlink scheduler. Powers on daily at the set time for SSH access, code pushes, and settings checks — independent of the upload calculation. Logged as `admin_open`/`admin_close` events. Disable with `--admin-time off`.

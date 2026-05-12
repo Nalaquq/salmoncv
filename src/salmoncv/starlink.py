@@ -4,7 +4,7 @@ import argparse
 import csv
 import math
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from salmoncv.power import starlink_on, starlink_off
@@ -128,6 +128,17 @@ def main():
         help=f"Path to upload manifest CSV (default: {DEFAULT_MANIFEST})",
     )
     parser.add_argument(
+        "--admin-time",
+        default="12:00",
+        help="Daily admin window start time (HH:MM, 24h). Set to 'off' to disable. (default: 12:00)",
+    )
+    parser.add_argument(
+        "--admin-duration",
+        type=int,
+        default=15,
+        help="Admin window duration in minutes (default: 15)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print plan without toggling Starlink",
@@ -149,12 +160,19 @@ def main():
 
     mode = "manual" if args.on_time and args.upload_time else "auto"
 
+    admin_enabled = args.admin_time.lower() != "off"
+    admin_ran_today = False
+
     print(f"Starlink scheduler started")
     print(f"Capture dir: {capture_dir}")
     print(f"Upload speed: {args.upload_speed} Mbps")
     print(f"Boot buffer: {args.boot_buffer}s")
     print(f"Check interval: {args.check_interval}s")
     print(f"Logging to: {log_path}")
+    if admin_enabled:
+        print(f"Admin window: {args.admin_time} for {args.admin_duration} min daily")
+    else:
+        print("Admin window: disabled")
     if args.on_time:
         print(f"Fixed start time: {args.on_time}")
     if args.upload_time:
@@ -166,13 +184,41 @@ def main():
     log_event(writer, logfile, "scheduler_start", mode=mode)
 
     try:
+        last_admin_date = None
+
         while True:
             now = datetime.now()
+            today = now.date()
 
+            # --- Admin window ---
+            if admin_enabled and last_admin_date != today:
+                admin_target = datetime.strptime(args.admin_time, "%H:%M").time()
+                admin_start = datetime.combine(today, admin_target)
+                admin_end = admin_start + timedelta(minutes=args.admin_duration)
+
+                if admin_start <= now < admin_end:
+                    remaining = (admin_end - now).total_seconds()
+                    print(f"{now_str()} | Admin window open ({args.admin_duration} min)")
+                    if not args.dry_run:
+                        starlink_on()
+                    log_event(writer, logfile, "admin_open",
+                              est_min=args.admin_duration, mode="admin")
+
+                    time.sleep(remaining)
+
+                    print(f"{now_str()} | Admin window closed")
+                    if not args.dry_run:
+                        starlink_off()
+                    log_event(writer, logfile, "admin_close",
+                              est_min=args.admin_duration, mode="admin")
+                    last_admin_date = today
+                elif now >= admin_end:
+                    last_admin_date = today
+
+            # --- Upload window ---
             if args.on_time:
                 target = datetime.strptime(args.on_time, "%H:%M").time()
                 current = now.time()
-                # Wait until the target time
                 if current < target:
                     wait = (
                         datetime.combine(now.date(), target) - now
@@ -180,8 +226,6 @@ def main():
                     print(f"Waiting until {args.on_time} ({int(wait / 60)} min)...")
                     time.sleep(wait)
                 elif current > target:
-                    # Already past today's window, wait until tomorrow
-                    from datetime import timedelta
                     tomorrow = datetime.combine(
                         now.date() + timedelta(days=1), target
                     )

@@ -258,6 +258,22 @@ salmoncv-starlink --upload-speed 10
 salmoncv-starlink --dry-run
 ```
 
+### Admin window
+
+By default, Starlink powers on every day at 12:00 PM for 15 minutes so you can SSH in, push code updates, or check settings. This happens automatically even if there are no images to upload.
+
+Change the admin time:
+
+```bash
+salmoncv-starlink --admin-time 08:00 --admin-duration 20
+```
+
+Disable the admin window:
+
+```bash
+salmoncv-starlink --admin-time off
+```
+
 ### All Starlink options
 
 | Option | Default | Description |
@@ -268,6 +284,8 @@ salmoncv-starlink --dry-run
 | `--check-interval` | `3600` | Seconds between checks (1 hour) |
 | `--on-time` | auto | Fixed daily start time (HH:MM) |
 | `--upload-time` | auto | Fixed window in minutes |
+| `--admin-time` | `12:00` | Daily admin window start (HH:MM, or "off") |
+| `--admin-duration` | `15` | Admin window length in minutes |
 | `--logfile` | `~/salmoncv/data/starlink_log.csv` | Log file path |
 | `--manifest` | `~/salmoncv/data/upload_manifest.csv` | Upload tracking file |
 | `--dry-run` | off | Print plan without toggling |
