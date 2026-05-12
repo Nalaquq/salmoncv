@@ -422,6 +422,8 @@ class TestSystemAPI:
         assert data["all_running"] is False
         assert data["any_running"] is False
         assert data["camera"] is False
+        assert data["lights_relay"] is False
+        assert data["starlink_relay"] is False
 
     def test_system_stop_all(self, client):
         r = client.post("/api/system/stop")
@@ -502,6 +504,43 @@ class TestSystemAPI:
         r = client.get("/api/system/running")
         data = r.get_json()
         assert data["any_running"] is False
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_running_relays_independent_of_schedulers(self, mock_popen, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10007
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start", json={})
+
+        with patch("os.kill"):
+            r = client.get("/api/system/running")
+            data = r.get_json()
+            assert data["lights"] is True
+            assert data["starlink"] is True
+            assert data["lights_relay"] is False
+            assert data["starlink_relay"] is False
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_running_relays_on_when_state_files_exist(self, mock_popen, client):
+        from salmoncv.power import LIGHTS_STATE, STARLINK_STATE
+        mock_proc = MagicMock()
+        mock_proc.pid = 10008
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start", json={})
+        LIGHTS_STATE.parent.mkdir(parents=True, exist_ok=True)
+        LIGHTS_STATE.write_text("2026-05-12T00:00:00")
+        STARLINK_STATE.write_text("2026-05-12T00:00:00")
+
+        with patch("os.kill"):
+            r = client.get("/api/system/running")
+            data = r.get_json()
+            assert data["lights_relay"] is True
+            assert data["starlink_relay"] is True
+
+        LIGHTS_STATE.unlink(missing_ok=True)
+        STARLINK_STATE.unlink(missing_ok=True)
 
     @patch("salmoncv.web.app.subprocess.Popen")
     def test_system_start_then_running_shows_all(self, mock_popen, client):

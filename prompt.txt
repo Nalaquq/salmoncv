@@ -401,3 +401,9 @@ Created `scripts/revert_hotspot.sh` as the revert engine. Updated docs to recomm
 **User**: The 'Start Counting' feature is buggy. Works in debug mode from shell but not after boot via systemd.
 
 **Claude**: Root cause: PATH. When Flask runs via systemd, the venv bin directory isn't on PATH. All `subprocess.Popen(["salmoncv-camera", ...])` calls fail silently because `stderr=subprocess.DEVNULL` swallows the "command not found" error. The dashboard reports "started" with a PID that's already dead. Fix: added `VENV_BIN = Path(os.sys.executable).parent` and replaced all 8 bare command names with full venv paths like `str(VENV_BIN / "salmoncv-camera")`. Now works identically from shell and systemd.
+
+---
+
+**User**: Dashboard shows lights AND starlink both "on" after Start Counting, but only the lights relay is actually energized.
+
+**Claude**: The `/api/system/running` endpoint only checked PID files (scheduler alive), not actual relay state. When the lights scheduler starts and turns on the relay, the dashboard showed "ON" for both because both schedulers had valid PIDs. Fix: added `lights_relay` and `starlink_relay` boolean fields to the response that check the actual GPIO state files (`LIGHTS_STATE.exists()`, `STARLINK_STATE.exists()`), imported from `salmoncv.power`. Updated `dashboard.html` to show "Sched" for scheduler status and a separate "relay: ON/OFF" badge for actual GPIO state. Added 2 new tests verifying relays are independent of scheduler PID status. Total: 103 tests passing.

@@ -741,6 +741,11 @@ def create_app():
         starlink, _ = _pid_running(STARLINK_PID)
         all_running = cam and sens and lights and starlink
         any_running = cam or sens or lights or starlink
+
+        from salmoncv.power import LIGHTS_STATE, STARLINK_STATE
+        lights_relay_on = LIGHTS_STATE.exists()
+        starlink_relay_on = STARLINK_STATE.exists()
+
         return jsonify({
             "all_running": all_running,
             "any_running": any_running,
@@ -748,6 +753,8 @@ def create_app():
             "sensors": sens,
             "lights": lights,
             "starlink": starlink,
+            "lights_relay": lights_relay_on,
+            "starlink_relay": starlink_relay_on,
         })
 
     # --- Storage API ---

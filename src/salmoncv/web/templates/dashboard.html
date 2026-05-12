@@ -26,9 +26,11 @@
   </div>
   <div id="runningStatus" style="display:none">
     <p><span class="label">Camera:</span> <span id="rCam" class="badge badge-off">--</span>
-       <span class="label" style="margin-left:1rem">Sensors:</span> <span id="rSens" class="badge badge-off">--</span>
-       <span class="label" style="margin-left:1rem">Lights:</span> <span id="rLights" class="badge badge-off">--</span>
-       <span class="label" style="margin-left:1rem">Starlink:</span> <span id="rSL" class="badge badge-off">--</span></p>
+       <span class="label" style="margin-left:1rem">Sensors:</span> <span id="rSens" class="badge badge-off">--</span></p>
+    <p><span class="label">Lights:</span> <span id="rLights" class="badge badge-off">--</span>
+       <span class="label" style="margin-left:0.5rem">relay:</span> <span id="rLightsRelay" class="badge badge-off">--</span>
+       <span class="label" style="margin-left:1rem">Starlink:</span> <span id="rSL" class="badge badge-off">--</span>
+       <span class="label" style="margin-left:0.5rem">relay:</span> <span id="rSLRelay" class="badge badge-off">--</span></p>
   </div>
   <p id="startMsg" class="msg"></p>
 </div>
@@ -179,10 +181,12 @@ function refreshRunning() {
 
     if (anyRunning) {
       scv.text('sysStatus', d.all_running ? 'All services running' : 'Some services running');
-      scv.text('rCam', d.camera ? 'ON' : 'OFF'); scv.badge('rCam', d.camera);
-      scv.text('rSens', d.sensors ? 'ON' : 'OFF'); scv.badge('rSens', d.sensors);
-      scv.text('rLights', d.lights ? 'ON' : 'OFF'); scv.badge('rLights', d.lights);
-      scv.text('rSL', d.starlink ? 'ON' : 'OFF'); scv.badge('rSL', d.starlink);
+      scv.text('rCam', d.camera ? 'Running' : 'OFF'); scv.badge('rCam', d.camera);
+      scv.text('rSens', d.sensors ? 'Running' : 'OFF'); scv.badge('rSens', d.sensors);
+      scv.text('rLights', d.lights ? 'Sched' : 'OFF'); scv.badge('rLights', d.lights);
+      scv.text('rLightsRelay', d.lights_relay ? 'ON' : 'OFF'); scv.badge('rLightsRelay', d.lights_relay);
+      scv.text('rSL', d.starlink ? 'Sched' : 'OFF'); scv.badge('rSL', d.starlink);
+      scv.text('rSLRelay', d.starlink_relay ? 'ON' : 'OFF'); scv.badge('rSLRelay', d.starlink_relay);
     } else {
       scv.text('sysStatus', 'Ready to start');
     }
