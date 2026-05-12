@@ -233,8 +233,8 @@ def create_app():
                 "pressure_hpa": round(data.pressure, 2),
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             })
-        except Exception:
-            return jsonify({"ok": False, "error": "Sensor not available"})
+        except Exception as e:
+            return jsonify({"ok": False, "error": f"Sensor not available: {e}"})
 
     @app.route("/api/sensors/history")
     def api_sensors_history():

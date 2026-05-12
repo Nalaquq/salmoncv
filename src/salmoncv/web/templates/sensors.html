@@ -56,7 +56,7 @@ function refreshSensors() {
       scv.text('sensorTime', 'Last update: ' + d.timestamp);
       scv.text('sensorMsg', '');
     } else {
-      scv.text('sensorMsg', 'Sensor not available');
+      scv.text('sensorMsg', d.error || 'Sensor not available');
     }
   });
 }
