@@ -165,3 +165,19 @@ Existing docs kept as-is — they serve as developer reference and project histo
 **User**: I want the lights to have a log file of time turned on and off so we can troubleshoot in the field.
 
 **Claude**: Added CSV logging to `lights.py` at `~/salmoncv/data/lights_log.csv`. Logs every event: scheduler_start, schedule_set, lights_on, lights_off, no_twilight, scheduler_stop. Each row includes timestamp, event type, scheduled on/off times, and mode (auto/manual/mixed). Configurable with `--logfile`.
+
+---
+
+**User**: Create the same solution for Starlink on/off. Default duration should be calculated from number of captured images and estimated upload bandwidth. User should also be able to turn it on/off manually.
+
+**Claude**: Created `src/salmoncv/starlink.py` — Starlink power scheduler:
+- Scans capture dir for new images (tracks uploaded images via `~/salmoncv/data/upload_manifest.csv`)
+- Calculates window: `(image_count * avg_size * 8) / upload_speed + boot_buffer + 10% safety`
+- Defaults: 5 Mbps upload speed, 5 min boot buffer, checks hourly
+- Manual override: `--on-time 02:00 --upload-time 30` for fixed daily schedule
+- CSV event log at `~/salmoncv/data/starlink_log.csv`
+- `--dry-run` mode for testing
+- Manual immediate control still available via `salmoncv-power starlink-on/off`
+- Note: manages power window only — actual file upload script is a future feature
+
+Updated docs/usage-guide.md and README.md with Starlink section.

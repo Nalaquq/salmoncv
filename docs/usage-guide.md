@@ -209,6 +209,82 @@ The log file is appended to — it keeps growing across runs. It will not overwr
 
 ---
 
+## Starlink
+
+The Starlink scheduler manages when the Starlink terminal powers on and off. By default, it calculates how long the upload window needs to be based on the number of new images captured since the last upload and an estimated upload speed.
+
+### Automatic mode
+
+```bash
+salmoncv-starlink
+```
+
+This checks every hour for new images in `~/salmoncv/captures/`. When new images are found, it:
+
+1. Calculates the upload window based on image count and file sizes
+2. Adds 5 minutes for Starlink boot time
+3. Powers on Starlink
+4. Waits for the upload window to finish
+5. Powers off Starlink
+6. Marks the images as uploaded so they are not counted again
+
+### Fixed daily schedule
+
+Turn Starlink on at 2 AM for 30 minutes:
+
+```bash
+salmoncv-starlink --on-time 02:00 --upload-time 30
+```
+
+### Fixed window, auto timing
+
+Skip the bandwidth calculation and use a 45-minute window whenever new images are found:
+
+```bash
+salmoncv-starlink --upload-time 45
+```
+
+### Adjust upload speed estimate
+
+If your Starlink connection is faster or slower than 5 Mbps:
+
+```bash
+salmoncv-starlink --upload-speed 10
+```
+
+### Check without toggling
+
+```bash
+salmoncv-starlink --dry-run
+```
+
+### All Starlink options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--capture-dir` | `~/salmoncv/captures` | Directory to scan for images |
+| `--upload-speed` | `5.0` | Estimated upload speed in Mbps |
+| `--boot-buffer` | `300` | Seconds for Starlink to boot (5 min) |
+| `--check-interval` | `3600` | Seconds between checks (1 hour) |
+| `--on-time` | auto | Fixed daily start time (HH:MM) |
+| `--upload-time` | auto | Fixed window in minutes |
+| `--logfile` | `~/salmoncv/data/starlink_log.csv` | Log file path |
+| `--manifest` | `~/salmoncv/data/upload_manifest.csv` | Upload tracking file |
+| `--dry-run` | off | Print plan without toggling |
+
+### Log files
+
+The Starlink scheduler creates two files:
+
+- **`~/salmoncv/data/starlink_log.csv`** — Every event: scheduler start/stop, window open/close, no new images
+- **`~/salmoncv/data/upload_manifest.csv`** — Tracks which images have been "uploaded" so they are not counted again
+
+### Important note
+
+The scheduler manages the **power window** — it does not perform the actual file upload. A future upload script will handle transferring files to a remote server during the window.
+
+---
+
 ## Power
 
 The power command turns lights and Starlink on or off immediately. Use this for manual control and testing.
@@ -302,6 +378,7 @@ tmux ls
 tmux new -s camera -d "salmoncv-camera --no-inference --outdir ~/salmoncv/captures"
 tmux new -s lights -d "salmoncv-lights"
 tmux new -s sensors -d "salmoncv-sensors --interval 30"
+tmux new -s starlink -d "salmoncv-starlink"
 ```
 
 ---
@@ -423,6 +500,11 @@ salmoncv-camera --no-inference --outdir ~/salmoncv/captures --interval 10
 salmoncv-lights                          # auto sunset/sunrise
 salmoncv-lights --on-time 20:00 --off-time 06:30   # custom schedule
 salmoncv-lights --dry-run                # test without toggling
+
+# Starlink
+salmoncv-starlink                        # auto window based on images
+salmoncv-starlink --on-time 02:00 --upload-time 30  # daily at 2 AM
+salmoncv-starlink --dry-run              # test without toggling
 
 # Sensors
 salmoncv-sensors                         # log every 2s

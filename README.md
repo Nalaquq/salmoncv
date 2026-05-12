@@ -60,6 +60,7 @@ See the full usage guide: [docs/usage-guide.md](docs/usage-guide.md)
 |---------|-------------|
 | `salmoncv-camera` | Capture images with optional Coral TPU inference |
 | `salmoncv-lights` | Schedule lights based on sunset/sunrise or custom times |
+| `salmoncv-starlink` | Schedule Starlink power based on upload needs or custom times |
 | `salmoncv-sensors` | Log BME280 environmental data to CSV |
 | `salmoncv-power` | Turn lights and Starlink on or off |
 | `salmoncv-probe` | Test GPIO pins to identify relay wiring |
