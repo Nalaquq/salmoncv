@@ -559,48 +559,76 @@ This shows all running tmux sessions. If a session is missing, the service insid
 
 The web dashboard lets you control everything from a phone or tablet browser — no terminal needed.
 
-### Start the dashboard
+### Connecting to the dashboard
+
+| Method | Address |
+|--------|---------|
+| **Wi-Fi hotspot** | Connect to `SalmonCV` Wi-Fi (password: `salmon2026`), open **http://192.168.4.1** |
+| **Local network** | Open **http://nalaquqpi.local** |
+
+The dashboard starts automatically on boot — just connect and open the browser.
+
+### Auto-start on boot (one-time setup)
 
 ```bash
-sudo salmoncv-web
+sudo bash scripts/install_service.sh
 ```
 
-This starts the web server on port 80. Open a browser and go to the Pi's IP address (e.g., `http://192.168.4.1` if using the hotspot, or `http://nalaquqpi.local` on local Wi-Fi).
+This registers `salmoncv-web` as a systemd service. It starts on every boot and restarts automatically if it crashes.
+
+Manage the service:
+
+```bash
+sudo systemctl status salmoncv-web      # check if running
+sudo systemctl restart salmoncv-web     # restart after code update
+sudo systemctl stop salmoncv-web        # stop
+sudo journalctl -u salmoncv-web -f      # view live logs
+```
 
 ### Development mode
 
+For testing without the systemd service:
+
 ```bash
+sudo systemctl stop salmoncv-web       # stop the service first
 salmoncv-web --port 5000 --debug
 ```
 
 ### Dashboard pages
 
-| Page | What it shows |
-|------|---------------|
-| **Dashboard** | At-a-glance status of camera, sensors, lights, Starlink, and system |
-| **Camera** | Take a single photo with live preview, start/stop time-lapse, set interval and resolution |
-| **Gallery** | Browse captured images as thumbnails, click to view full size |
-| **Sensors** | Live temperature, humidity, and pressure readings (updates every 5 seconds), history table |
-| **Power** | Toggle lights and Starlink on/off, view schedules, check upload queue |
-| **Settings** | System info (hostname, uptime, CPU temp), disk usage, download log files |
+| Page | What it does |
+|------|-------------|
+| **Dashboard** | **Start Counting** button to launch all services at once. System overview, storage selector (T9/SD), live status badges. |
+| **Camera** | Single capture with preview, time-lapse start/stop, manual controls (shutter speed, gain/ISO, white balance, exposure compensation) |
+| **Gallery** | Browse captured images as thumbnails, click for full size, select and delete individual or all images |
+| **Sensors** | Live BME280 temperature, humidity, and pressure readings (updates every 5 seconds), history table, CSV download |
+| **Monitor** | Estimated power draw per component with color-coded bar, temperature/humidity/pressure charts, case health warnings |
+| **Power** | Toggle lights and Starlink on/off, start/stop light and Starlink schedulers with auto (civil twilight / bandwidth) or manual mode |
+| **Settings** | System info (hostname, uptime, CPU temp), Samsung T9 and SD card usage with progress bars, download all log files |
 
-### Wi-Fi hotspot
+### Wi-Fi hotspot (one-time setup)
 
-To let field users connect directly to the Pi without an existing Wi-Fi network, set up the hotspot:
+Requires physical access to the Pi (monitor + keyboard) in case something goes wrong:
 
 ```bash
 sudo bash scripts/setup_hotspot.sh
 sudo reboot
 ```
 
-After reboot, connect your phone to the **SalmonCV** Wi-Fi network, then open `http://192.168.4.1` in a browser.
+After reboot, connect your phone to the **SalmonCV** Wi-Fi network (password: `salmon2026`), then open `http://192.168.4.1` in a browser.
 
 See [hotspot-setup.md](hotspot-setup.md) for full details.
 
-### Run in the background
+### Updating the software
+
+After pushing new code to GitHub:
 
 ```bash
-tmux new -d -s web 'sudo salmoncv-web'
+cd ~/salmoncv
+source venv/bin/activate
+git pull
+pip install -e .
+sudo systemctl restart salmoncv-web
 ```
 
 ---
@@ -608,12 +636,28 @@ tmux new -d -s web 'sudo salmoncv-web'
 ## Quick Reference Card
 
 ```
-# Activate environment (do this first every time)
+# === CONNECT ===
+# Wi-Fi hotspot:  connect to "SalmonCV", open http://192.168.4.1
+# Local network:  open http://nalaquqpi.local
+# SSH:            ssh nalaquq@nalaquqpi.local
+
+# === WEB SERVICE ===
+sudo systemctl status salmoncv-web      # check status
+sudo systemctl restart salmoncv-web     # restart after update
+sudo journalctl -u salmoncv-web -f      # live logs
+
+# === UPDATE SOFTWARE ===
+cd ~/salmoncv && source venv/bin/activate
+git pull && pip install -e .
+sudo systemctl restart salmoncv-web
+
+# === CLI COMMANDS (activate venv first) ===
 cd ~/salmoncv && source venv/bin/activate
 
 # Camera
-salmoncv-camera --no-inference --outdir ~/salmoncv/captures
-salmoncv-camera --no-inference --outdir ~/salmoncv/captures --interval 10
+salmoncv-camera --no-inference                              # auto storage
+salmoncv-camera --no-inference --interval 10                # every 10s
+salmoncv-camera --no-inference --shutter 5000 --gain 2      # manual exposure
 
 # Lights
 salmoncv-lights                          # auto sunset/sunrise
@@ -634,14 +678,7 @@ salmoncv-power lights-on
 salmoncv-power lights-off
 salmoncv-power starlink-on
 salmoncv-power starlink-off
-salmoncv-power test
 
 # Watchdog (run manually or via cron)
 salmoncv-watchdog                        # check and enforce max durations
-
-# Background sessions
-tmux new -s camera    # start session
-Ctrl+B then D         # detach
-tmux attach -t camera # reconnect
-tmux ls               # list sessions
 ```

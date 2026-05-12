@@ -6,10 +6,13 @@ Designed for unattended field deployment in Quinhagak, Alaska.
 
 ## What It Does
 
-- **Camera** — Captures images on a timer and logs metadata (file size, resolution, temperature, humidity, pressure)
+- **Web Dashboard** — Browser-based control panel accessible from phone or tablet over Wi-Fi. Start/stop all services, adjust camera settings, view gallery, monitor power and environment — no SSH needed.
+- **Camera** — Captures images on a timer with manual controls (shutter, gain, white balance, exposure). Logs metadata including environmental sensor data.
 - **Lights** — Turns LED floodlights on at sunset and off at sunrise automatically, or on a custom schedule
 - **Sensors** — Logs temperature, humidity, and barometric pressure from a BME280 sensor
-- **Power** — Controls relay-switched loads (lights, Starlink) from the command line
+- **Monitor** — Estimated power draw, environmental charts, and system health monitoring
+- **Power** — Controls relay-switched loads (lights, Starlink) from the command line or browser
+- **Storage** — Samsung T9 SSD as primary storage with automatic SD card fallback
 - **Inference** — Classifies images on-device using a Coral Edge TPU (optional)
 
 ## Hardware
@@ -17,39 +20,45 @@ Designed for unattended field deployment in Quinhagak, Alaska.
 - Raspberry Pi 5
 - Google Coral USB Accelerator
 - Raspberry Pi HQ Camera (IMX477)
-- BME280 environmental sensor
+- BME280 environmental sensor (inside camera case)
+- Samsung T9 SSD (932GB primary storage)
 - 2-channel relay board (GPIO17 = lights, GPIO27 = Starlink)
 - 100W solar panel, 30A charge controller, 12V marine battery
 - Starlink terminal
 
-## Quick Start
+## Connect to the Dashboard
+
+| Method | Address |
+|--------|---------|
+| **Wi-Fi hotspot** | Connect to `SalmonCV` Wi-Fi, open **http://192.168.4.1** |
+| **Local network** | Open **http://nalaquqpi.local** |
+| **SSH** | `ssh nalaquq@nalaquqpi.local` |
+
+The dashboard starts automatically on boot. Hit **Start Counting** to launch camera, sensors, lights, and Starlink.
+
+## Quick Start (First-Time Setup)
 
 SSH into the Pi:
 
 ```bash
 ssh nalaquq@nalaquqpi.local
-```
-
-Install the software:
-
-```bash
 cd ~/salmoncv
-git pull
 source venv/bin/activate
+git pull
 pip install -e .
 ```
 
-Test the camera:
+Enable auto-start on boot:
 
 ```bash
-salmoncv-camera --no-inference --outdir ~/salmoncv/test_captures
+sudo bash scripts/install_service.sh
 ```
 
-Test the lights:
+Set up the Wi-Fi hotspot (requires monitor access):
 
 ```bash
-salmoncv-power lights-on
-salmoncv-power lights-off
+sudo bash scripts/setup_hotspot.sh
+sudo reboot
 ```
 
 See the full usage guide: [docs/usage-guide.md](docs/usage-guide.md)
@@ -77,9 +86,10 @@ salmoncv/
 │   ├── sensors.py      BME280 environmental logging
 │   ├── power.py        Relay control (lights, Starlink)
 │   ├── gpio_probe.py   GPIO pin testing utility
+│   ├── storage.py      Smart storage (T9 SSD / SD card fallback)
 │   └── web/            Flask web dashboard
 ├── docs/               Setup guides and design documents
-├── scripts/            Shell utilities
+├── scripts/            Setup and install scripts
 ├── tests/              Test suite (placeholder)
 ├── coral_test/         Coral TPU test model and data
 ├── data/               Sensor and capture logs (gitignored)
@@ -88,14 +98,19 @@ salmoncv/
 
 ## Web Dashboard
 
-Access the full dashboard from a phone or tablet — no SSH required.
+Access from phone or tablet — no SSH required. The dashboard starts on boot via systemd.
 
-```bash
-sudo salmoncv-web          # start on port 80
-salmoncv-web --port 5000   # development mode
-```
+| Page | What it does |
+|------|-------------|
+| **Dashboard** | Start/stop all services, system overview, storage selector |
+| **Camera** | Single capture with preview, time-lapse, manual settings (shutter, ISO, white balance) |
+| **Gallery** | Browse/delete captured images with thumbnails and lightbox |
+| **Sensors** | Live BME280 readings, history table, CSV download |
+| **Monitor** | Estimated power draw, temperature/humidity/pressure charts, case health |
+| **Power** | Toggle lights/Starlink, start/stop schedulers with auto or manual mode |
+| **Settings** | System info, disk usage (T9 + SD), log file downloads |
 
-Set up the Wi-Fi hotspot so field users can connect directly: [docs/hotspot-setup.md](docs/hotspot-setup.md)
+Setup guides: [hotspot](docs/hotspot-setup.md) | [auto-start](docs/usage-guide.md#web-dashboard)
 
 ## Setup From Scratch
 
