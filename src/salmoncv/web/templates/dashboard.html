@@ -10,8 +10,31 @@
     <p><span class="label">Today:</span> <span id="camToday">--</span> images</p>
     <p><span class="label">Total:</span> <span id="camTotal">--</span> images</p>
     <p><span class="label">Last capture:</span> <span id="camLast">--</span></p>
-    <p><span class="label">Storage:</span> <span id="camDrive">--</span></p>
     <a href="/camera" class="btn btn-sm">Open Camera</a>
+  </div>
+
+  <div class="card" id="storageCard">
+    <h2>Storage</h2>
+    <p><span class="label">Active drive:</span> <span id="stDrive" class="badge badge-off">--</span></p>
+    <p><span class="label">Mode:</span>
+      <select id="stMode" class="input-sm" onchange="setStorageMode(this.value)">
+        <option value="auto">Auto (T9 first)</option>
+        <option value="t9">Samsung T9 only</option>
+        <option value="sd">SD Card only</option>
+      </select>
+    </p>
+    <div id="stT9" style="display:none">
+      <p class="muted">Samsung T9</p>
+      <div class="progress-bar"><div class="progress-fill" id="t9Bar" style="width:0%"></div></div>
+      <p class="muted"><span id="t9Info">--</span></p>
+    </div>
+    <div id="stSD">
+      <p class="muted">SD Card</p>
+      <div class="progress-bar"><div class="progress-fill" id="sdBar" style="width:0%"></div></div>
+      <p class="muted"><span id="sdInfo">--</span></p>
+    </div>
+    <p id="stMsg" class="msg"></p>
+    <a href="/settings" class="btn btn-sm">Details</a>
   </div>
 
   <div class="card" id="sensorCard">
@@ -40,7 +63,7 @@
     <h2>System</h2>
     <p><span class="label">Uptime:</span> <span id="sysUptime">--</span></p>
     <p><span class="label">CPU temp:</span> <span id="sysCpu">--</span></p>
-    <p><span class="label">Disk:</span> <span id="sysDisk">--</span></p>
+    <p><span class="label">Images:</span> <span id="sysImages">--</span></p>
     <a href="/settings" class="btn btn-sm">Settings</a>
   </div>
 </div>
@@ -48,6 +71,36 @@
 
 {% block scripts %}
 <script>
+function setStorageMode(mode) {
+  scv.post('/api/storage/set', {mode: mode}, function(d) {
+    if (d.ok) {
+      scv.text('stMsg', 'Switched to ' + d.drive);
+      refreshStorage();
+    } else {
+      scv.text('stMsg', 'Error: ' + d.error);
+    }
+  });
+}
+
+function refreshStorage() {
+  scv.get('/api/storage', function(d) {
+    scv.text('stDrive', d.drive);
+    scv.badge('stDrive', d.drive === 'Samsung T9');
+    document.getElementById('stMode').value = d.mode;
+
+    if (d.t9_available && d.t9_total_gb) {
+      document.getElementById('stT9').style.display = 'block';
+      document.getElementById('t9Bar').style.width = d.t9_percent + '%';
+      scv.text('t9Info', d.t9_free_gb + ' GB free / ' + d.t9_total_gb + ' GB');
+    } else {
+      document.getElementById('stT9').style.display = 'none';
+    }
+
+    document.getElementById('sdBar').style.width = d.sd_percent + '%';
+    scv.text('sdInfo', d.sd_free_gb + ' GB free / ' + d.sd_total_gb + ' GB');
+  });
+}
+
 function refreshDashboard() {
   scv.get('/api/camera/status', function(d) {
     scv.text('camStatus', d.running ? 'Running' : 'Stopped');
@@ -55,7 +108,6 @@ function refreshDashboard() {
     scv.text('camToday', d.today_images);
     scv.text('camTotal', d.total_images);
     scv.text('camLast', d.last_capture || 'None');
-    scv.text('camDrive', d.storage_drive || '--');
   });
 
   scv.get('/api/sensors/current', function(d) {
@@ -83,8 +135,10 @@ function refreshDashboard() {
   scv.get('/api/system', function(d) {
     scv.text('sysUptime', d.uptime || '--');
     scv.text('sysCpu', d.cpu_temp_c ? d.cpu_temp_c + ' °C' : '--');
-    scv.text('sysDisk', d.disk_used_gb + ' / ' + d.disk_total_gb + ' GB (' + d.disk_percent + '%)');
+    scv.text('sysImages', d.image_count);
   });
+
+  refreshStorage();
 }
 
 refreshDashboard();

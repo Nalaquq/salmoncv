@@ -15,7 +15,7 @@ from flask import (
     Flask, render_template, jsonify, request, send_file, send_from_directory,
 )
 
-from salmoncv.storage import get_capture_dir, get_storage_info, DATA_DIR
+from salmoncv.storage import get_capture_dir, get_storage_info, set_storage_pref, DATA_DIR
 
 THUMB_DIR = DATA_DIR / "thumbs"
 PID_FILE = DATA_DIR / ".camera_pid"
@@ -359,11 +359,27 @@ def create_app():
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)})
 
+    # --- Storage API ---
+
+    @app.route("/api/storage")
+    def api_storage():
+        return jsonify(get_storage_info())
+
+    @app.route("/api/storage/set", methods=["POST"])
+    def api_storage_set():
+        data = request.get_json(silent=True) or {}
+        mode = data.get("mode", "auto")
+        if mode not in ("auto", "t9", "sd"):
+            return jsonify({"ok": False, "error": "Invalid mode"}), 400
+        set_storage_pref(mode)
+        info = get_storage_info()
+        _log_request("/api/storage/set", "storage_mode", mode)
+        return jsonify({"ok": True, **info})
+
     # --- System API ---
 
     @app.route("/api/system")
     def api_system():
-        sd_disk = shutil.disk_usage(str(Path.home()))
         uptime = ""
         cpu_temp = ""
         try:
@@ -377,35 +393,15 @@ def create_app():
         except Exception:
             pass
 
-        info = get_storage_info()
         capture_dir = get_capture_dir()
         image_count = len(list(capture_dir.glob("*.jpg"))) if capture_dir.exists() else 0
 
-        result = {
+        return jsonify({
             "hostname": platform.node(),
             "uptime": uptime,
             "cpu_temp_c": cpu_temp,
-            "sd_total_gb": round(sd_disk.total / (1024 ** 3), 1),
-            "sd_used_gb": round(sd_disk.used / (1024 ** 3), 1),
-            "sd_free_gb": round(sd_disk.free / (1024 ** 3), 1),
-            "sd_percent": round(sd_disk.used / sd_disk.total * 100, 1),
             "image_count": image_count,
-            "storage_drive": info["drive"],
-            "t9_available": info["t9_available"],
-        }
-
-        t9_mount = Path("/media/nalaquq/T9")
-        if t9_mount.exists():
-            try:
-                t9_disk = shutil.disk_usage(str(t9_mount))
-                result["t9_total_gb"] = round(t9_disk.total / (1024 ** 3), 1)
-                result["t9_used_gb"] = round(t9_disk.used / (1024 ** 3), 1)
-                result["t9_free_gb"] = round(t9_disk.free / (1024 ** 3), 1)
-                result["t9_percent"] = round(t9_disk.used / t9_disk.total * 100, 1)
-            except OSError:
-                pass
-
-        return jsonify(result)
+        })
 
     @app.route("/api/logs/<logname>")
     def api_logs(logname):

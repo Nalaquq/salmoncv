@@ -24,7 +24,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Web activity log (`~/salmoncv/data/web_log.csv`) — records every action taken through the dashboard: captures, time-lapse start/stop, power toggles, with timestamp and client IP
 - Camera manual controls: shutter speed, gain (ISO), white balance, and exposure compensation — available in both CLI (`--shutter`, `--gain`, `--awb`, `--ev`) and web dashboard (auto/manual mode toggle)
 - Samsung T9 external drive as primary storage with automatic SD card fallback — `storage.py` module checks T9 availability (mounted, writable, >100MB free) on every capture; falls back to SD card if T9 is missing, full, or corrupted
-- Settings page shows both Samsung T9 and SD Card storage with usage bars; dashboard shows active storage drive
+- Settings page shows both Samsung T9 and SD Card storage with usage bars
+- Dashboard storage card with drive selector: Auto (T9 first), Samsung T9 only, or SD Card only — preference persists in `~/salmoncv/data/storage_config.json`
+- `/api/storage` and `/api/storage/set` endpoints for viewing and changing storage mode
 - `lights.py`: new lights scheduler module — defaults to civil twilight at Quinhagak, AK (59.75°N, 161.92°W), supports manual `--on-time`/`--off-time` overrides, `--dry-run` mode, handles midnight sun and polar night
 - `salmoncv-lights` CLI entry point
 - `astral` dependency for solar position calculations

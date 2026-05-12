@@ -267,3 +267,13 @@ Available in both the CLI (`--shutter`, `--gain`, `--awb`, `--ev`) and the web d
 - Web dashboard shows active drive on dashboard and camera pages
 - Settings page shows both T9 and SD Card with usage stats and progress bars
 - All web API endpoints use dynamic capture dir (gallery, thumbnails, Starlink queue, logs)
+
+**User**: A way to view storage and change the location on the dashboard would be nice.
+
+**Claude**: Added a storage card to the dashboard with:
+- Active drive indicator (Samsung T9 or SD Card)
+- Dropdown to switch mode: Auto (T9 first), Samsung T9 only, or SD Card only
+- Progress bars and free space for both drives
+- Preference saved to `~/salmoncv/data/storage_config.json` so it persists across restarts
+- New API endpoints: `GET /api/storage` and `POST /api/storage/set`
+- Settings page also updated with detailed storage view
