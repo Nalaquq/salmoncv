@@ -280,22 +280,31 @@ def create_app():
 
     @app.route("/api/sensors/current")
     def api_sensors_current():
-        try:
-            import bme280
-            import smbus2
-            bus = smbus2.SMBus(1)
-            cal = bme280.load_calibration_params(bus, 0x76)
-            data = bme280.sample(bus, 0x76, cal)
-            return jsonify({
-                "ok": True,
-                "temperature_c": round(data.temperature, 2),
-                "temperature_f": round(data.temperature * 9 / 5 + 32, 2),
-                "humidity": round(data.humidity, 2),
-                "pressure_hpa": round(data.pressure, 2),
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            })
-        except Exception as e:
-            return jsonify({"ok": False, "error": f"Sensor not available: {e}"})
+        import threading
+        result = {}
+        def _read():
+            try:
+                import bme280
+                import smbus2
+                bus = smbus2.SMBus(1)
+                cal = bme280.load_calibration_params(bus, 0x76)
+                data = bme280.sample(bus, 0x76, cal)
+                result["ok"] = True
+                result["temperature_c"] = round(data.temperature, 2)
+                result["temperature_f"] = round(data.temperature * 9 / 5 + 32, 2)
+                result["humidity"] = round(data.humidity, 2)
+                result["pressure_hpa"] = round(data.pressure, 2)
+                result["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            except Exception as e:
+                result["ok"] = False
+                result["error"] = f"Sensor not available: {e}"
+
+        t = threading.Thread(target=_read)
+        t.start()
+        t.join(timeout=3)
+        if t.is_alive():
+            return jsonify({"ok": False, "error": "Sensor read timed out"})
+        return jsonify(result)
 
     @app.route("/api/sensors/history")
     def api_sensors_history():
@@ -810,7 +819,7 @@ def main():
     args = parser.parse_args()
 
     app = create_app()
-    app.run(host=args.host, port=args.port, debug=args.debug)
+    app.run(host=args.host, port=args.port, debug=args.debug, threaded=True)
 
 
 if __name__ == "__main__":

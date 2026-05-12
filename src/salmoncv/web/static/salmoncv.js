@@ -2,21 +2,27 @@ var scv = {
   get: function(url, cb) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url);
+    xhr.timeout = 8000;
     xhr.onload = function() {
       if (xhr.status === 200) {
         try { cb(JSON.parse(xhr.responseText)); } catch(e) {}
       }
     };
+    xhr.onerror = function() {};
+    xhr.ontimeout = function() {};
     xhr.send();
   },
 
   post: function(url, body, cb) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', url);
+    xhr.timeout = 15000;
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = function() {
       try { cb(JSON.parse(xhr.responseText)); } catch(e) {}
     };
+    xhr.onerror = function() {};
+    xhr.ontimeout = function() {};
     xhr.send(JSON.stringify(body));
   },
 
