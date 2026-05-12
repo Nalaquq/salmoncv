@@ -10,12 +10,20 @@ requires-python = ">=3.9"
 dependencies = [
     "Pillow",
     "numpy==1.26.4",
+    "astral",
+    "flask",
+]
+
+[project.optional-dependencies]
+pi = [
     "tflite-runtime",
     "pycoral~=2.0",
     "RPi.bme280",
     "smbus2",
-    "astral",
-    "flask",
+]
+test = [
+    "pytest",
+    "pytest-cov",
 ]
 
 [project.scripts]
