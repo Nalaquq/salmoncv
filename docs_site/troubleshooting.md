@@ -119,7 +119,9 @@ Navigate to **Interface Options > I2C** and enable it. Reboot.
 
 ### Lights or Starlink won't turn off
 
-Run the watchdog manually:
+The easiest fix is to click **Stop All** on the dashboard --- it stops all services and turns off both relays.
+
+From the command line, run the watchdog:
 
 ```bash
 salmoncv-watchdog

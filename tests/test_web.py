@@ -509,6 +509,24 @@ class TestSystemAPI:
         data = r.get_json()
         assert data["any_running"] is False
 
+    @patch("salmoncv.power.subprocess.run")
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_stop_turns_off_relays(self, mock_popen, mock_pin, client):
+        mock_proc = MagicMock()
+        mock_proc.pid = 10009
+        mock_popen.return_value = mock_proc
+
+        power.LIGHTS_STATE.write_text("2026-05-12T10:00:00")
+        power.STARLINK_STATE.write_text("2026-05-12T10:00:00")
+
+        with patch("os.kill"):
+            r = client.post("/api/system/stop")
+            data = r.get_json()
+            assert data["ok"] is True
+
+        assert not power.LIGHTS_STATE.exists()
+        assert not power.STARLINK_STATE.exists()
+
     @patch("salmoncv.web.app.subprocess.Popen")
     def test_system_running_relays_independent_of_schedulers(self, mock_popen, client):
         mock_proc = MagicMock()

@@ -733,6 +733,17 @@ def create_app():
         results["sensors"] = _stop_pid(SENSORS_PID)
         results["lights"] = _stop_pid(LIGHTS_PID)
         results["starlink"] = _stop_pid(STARLINK_PID)
+
+        from salmoncv.power import LIGHTS_STATE, STARLINK_STATE
+        try:
+            from salmoncv.power import lights_off, starlink_off
+            if LIGHTS_STATE.exists():
+                lights_off()
+            if STARLINK_STATE.exists():
+                starlink_off()
+        except Exception:
+            pass
+
         if SYSTEM_CONF.exists():
             SYSTEM_CONF.unlink()
         _log_request("/api/system/stop", "system_stop")

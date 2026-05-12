@@ -413,3 +413,9 @@ Created `scripts/revert_hotspot.sh` as the revert engine. Updated docs to recomm
 **User**: Dashboard still shows lights and starlink as "on" after boot even though they're both physically off.
 
 **Claude**: Root cause: the relay state files (`.lights_on_since`, `.starlink_on_since`) in `~/salmoncv/data/` persist on disk across reboots, but GPIO pins reset to LOW on power cycle. The dashboard reads these stale files and reports relays as "ON". Fix: `create_app()` now clears both state files on startup, since after a reboot the relays are always off. Added a test verifying stale state files are removed when the Flask app starts. Total: 104 tests passing.
+
+---
+
+**User**: "Stop All" stops camera captures but doesn't turn off the lights and Starlink relays.
+
+**Claude**: The `/api/system/stop` endpoint only killed scheduler PIDs but never called `lights_off()` / `starlink_off()`. Added relay shutoff: after stopping all scheduler processes, the endpoint now checks if relay state files exist and calls the corresponding off functions to de-energize the GPIO pins. Added a test that writes state files, calls stop, and verifies both are removed. Updated docs (web-dashboard.md, troubleshooting.md) to reflect that Stop All also turns off relays. Total: 105 tests passing.

@@ -19,6 +19,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Start Counting broken after boot**: subprocess calls used bare command names (`salmoncv-camera`, etc.) which weren't on PATH when Flask ran via systemd. Now uses full venv binary paths resolved at runtime via `sys.executable`.
 - **Dashboard showed both relays as "on" when only one was energized**: `/api/system/running` only checked scheduler PID files, not actual relay state. Now returns separate `lights_relay` and `starlink_relay` fields that check the GPIO state files. Dashboard distinguishes "Sched" (scheduler running) from relay "ON/OFF".
 - **Dashboard showed relays as "on" after reboot when they were physically off**: Relay state files (`.lights_on_since`, `.starlink_on_since`) persisted across reboots but GPIO pins reset to LOW on power cycle. Flask app now clears stale state files on startup.
+- **"Stop All" didn't turn off lights/Starlink relays**: The stop endpoint only killed scheduler processes but left relays energized. Now also calls `lights_off()` and `starlink_off()` if the relays are on.
 
 ### Changed
 - Hardware-only dependencies (pycoral, tflite-runtime, RPi.bme280, smbus2) moved to `[project.optional-dependencies.pi]`; install with `pip install -e ".[pi]"` on the Pi

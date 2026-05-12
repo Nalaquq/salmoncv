@@ -18,7 +18,7 @@ The dashboard starts automatically on boot.
 The main landing page with:
 
 - **Start Counting** --- one button to launch camera, sensors, lights, and Starlink all at once
-- **Stop All** --- shut down all services
+- **Stop All** --- shut down all services and turn off lights/Starlink relays if they're on
 - Live status badges for each service
 - Configurable capture interval and sensor interval
 - Storage selector (Auto / Samsung T9 / SD Card) with usage bars
