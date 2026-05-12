@@ -297,3 +297,15 @@ Available in both the CLI (`--shutter`, `--gain`, `--awb`, `--ev`) and the web d
 - Config saved to `~/salmoncv/data/starlink_config.json`
 
 Both schedulers run as background processes managed via PID files, same pattern as the camera time-lapse. Settings persist across restarts.
+
+---
+
+**User**: We should include a trigger that starts the counts — triggers the whole system to begin.
+
+**Claude**: Added a master **Start Counting** button at the top of the dashboard that launches all four services in one click:
+1. Camera time-lapse (configurable interval, default 3s)
+2. Sensor logging (configurable interval, default 30s)
+3. Lights scheduler (uses saved config — auto or manual)
+4. Starlink scheduler (uses saved config — auto or manual)
+
+A **Stop All** button shuts everything down. Live status badges show which services are running (Camera, Sensors, Lights, Starlink). Services that are already running are skipped rather than duplicated. Scheduler configs from the Power page are reused so the user only needs to configure once.

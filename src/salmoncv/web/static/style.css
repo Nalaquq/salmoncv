@@ -136,6 +136,11 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--muted); }
 .btn-green { background: var(--green); }
 .btn-red { background: var(--red); }
 .btn-active { background: var(--text); }
+.btn-lg { padding: 0.75rem 2rem; font-size: 1.1rem; }
+
+/* Start card */
+.start-card { border: 2px solid var(--accent); }
+.start-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
 .btn-group { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
 
 /* Forms */

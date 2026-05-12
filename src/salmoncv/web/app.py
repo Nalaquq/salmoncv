@@ -22,8 +22,10 @@ THUMB_DIR = DATA_DIR / "thumbs"
 PID_FILE = DATA_DIR / ".camera_pid"
 LIGHTS_PID = DATA_DIR / ".lights_pid"
 STARLINK_PID = DATA_DIR / ".starlink_pid"
+SENSORS_PID = DATA_DIR / ".sensors_pid"
 LIGHTS_CONF = DATA_DIR / "lights_config.json"
 STARLINK_CONF = DATA_DIR / "starlink_config.json"
+SYSTEM_CONF = DATA_DIR / "system_config.json"
 WEB_LOG = DATA_DIR / "web_log.csv"
 
 
@@ -503,6 +505,149 @@ def create_app():
         STARLINK_PID.unlink(missing_ok=True)
         _log_request("/api/scheduler/starlink/stop", "starlink_scheduler_stop")
         return jsonify({"ok": True})
+
+    # --- System Start/Stop ---
+
+    def _stop_pid(pid_file):
+        running, pid = _pid_running(pid_file)
+        if running:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+        pid_file.unlink(missing_ok=True)
+        return running
+
+    @app.route("/api/system/start", methods=["POST"])
+    def api_system_start():
+        data = request.get_json(silent=True) or {}
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        results = {}
+
+        # Camera
+        cam_running, _ = _pid_running(PID_FILE)
+        if not cam_running:
+            cam_interval = data.get("camera_interval", 3)
+            cam_width = data.get("camera_width", 4056)
+            cam_height = data.get("camera_height", 3040)
+            proc = subprocess.Popen(
+                ["salmoncv-camera", "--no-inference",
+                 "--outdir", str(get_capture_dir()),
+                 "--interval", str(cam_interval),
+                 "--width", str(cam_width),
+                 "--height", str(cam_height)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            PID_FILE.write_text(str(proc.pid))
+            results["camera"] = {"started": True, "pid": proc.pid}
+        else:
+            results["camera"] = {"started": False, "reason": "already running"}
+
+        # Sensors
+        sens_running, _ = _pid_running(SENSORS_PID)
+        if not sens_running:
+            sens_interval = data.get("sensor_interval", 30)
+            proc = subprocess.Popen(
+                ["salmoncv-sensors", "--interval", str(sens_interval)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            SENSORS_PID.write_text(str(proc.pid))
+            results["sensors"] = {"started": True, "pid": proc.pid}
+        else:
+            results["sensors"] = {"started": False, "reason": "already running"}
+
+        # Lights scheduler
+        ls_running, _ = _pid_running(LIGHTS_PID)
+        if not ls_running:
+            ls_conf = {"mode": "auto", "on_time": "", "off_time": ""}
+            if LIGHTS_CONF.exists():
+                try:
+                    ls_conf.update(json.loads(LIGHTS_CONF.read_text()))
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            cmd = ["salmoncv-lights"]
+            if ls_conf["mode"] == "manual":
+                if ls_conf.get("on_time"):
+                    cmd.extend(["--on-time", ls_conf["on_time"]])
+                if ls_conf.get("off_time"):
+                    cmd.extend(["--off-time", ls_conf["off_time"]])
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            LIGHTS_PID.write_text(str(proc.pid))
+            results["lights"] = {"started": True, "pid": proc.pid}
+        else:
+            results["lights"] = {"started": False, "reason": "already running"}
+
+        # Starlink scheduler
+        sl_running, _ = _pid_running(STARLINK_PID)
+        if not sl_running:
+            sl_conf = {
+                "mode": "auto", "on_time": "", "upload_time": "",
+                "admin_time": "12:00", "admin_duration": 15,
+                "upload_speed": 5.0,
+            }
+            if STARLINK_CONF.exists():
+                try:
+                    sl_conf.update(json.loads(STARLINK_CONF.read_text()))
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            cmd = ["salmoncv-starlink",
+                   "--upload-speed", str(sl_conf["upload_speed"]),
+                   "--admin-duration", str(sl_conf["admin_duration"])]
+            if sl_conf["mode"] == "manual" and sl_conf.get("on_time"):
+                cmd.extend(["--on-time", sl_conf["on_time"]])
+            if sl_conf.get("upload_time"):
+                cmd.extend(["--upload-time", str(sl_conf["upload_time"])])
+            admin = sl_conf.get("admin_time", "12:00")
+            if admin and admin != "off":
+                cmd.extend(["--admin-time", admin])
+            elif admin == "off":
+                cmd.extend(["--admin-time", "off"])
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            STARLINK_PID.write_text(str(proc.pid))
+            results["starlink"] = {"started": True, "pid": proc.pid}
+        else:
+            results["starlink"] = {"started": False, "reason": "already running"}
+
+        SYSTEM_CONF.write_text(json.dumps({
+            "started_at": datetime.now().isoformat(),
+            "camera_interval": data.get("camera_interval", 3),
+            "sensor_interval": data.get("sensor_interval", 30),
+        }))
+        _log_request("/api/system/start", "system_start", json.dumps(results))
+        return jsonify({"ok": True, "results": results})
+
+    @app.route("/api/system/stop", methods=["POST"])
+    def api_system_stop():
+        results = {}
+        results["camera"] = _stop_pid(PID_FILE)
+        results["sensors"] = _stop_pid(SENSORS_PID)
+        results["lights"] = _stop_pid(LIGHTS_PID)
+        results["starlink"] = _stop_pid(STARLINK_PID)
+        if SYSTEM_CONF.exists():
+            SYSTEM_CONF.unlink()
+        _log_request("/api/system/stop", "system_stop")
+        return jsonify({"ok": True, "stopped": results})
+
+    @app.route("/api/system/running")
+    def api_system_running():
+        cam, _ = _pid_running(PID_FILE)
+        sens, _ = _pid_running(SENSORS_PID)
+        lights, _ = _pid_running(LIGHTS_PID)
+        starlink, _ = _pid_running(STARLINK_PID)
+        all_running = cam and sens and lights and starlink
+        any_running = cam or sens or lights or starlink
+        return jsonify({
+            "all_running": all_running,
+            "any_running": any_running,
+            "camera": cam,
+            "sensors": sens,
+            "lights": lights,
+            "starlink": starlink,
+        })
 
     # --- Storage API ---
 

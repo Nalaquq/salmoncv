@@ -30,6 +30,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Lights and Starlink scheduler controls on Power page — start/stop schedulers, switch between auto (civil twilight / bandwidth calc) and manual mode with custom times, all from the browser
 - Scheduler configs saved to JSON files in `~/salmoncv/data/` so settings persist across restarts
 - New API endpoints: `/api/scheduler/lights/config|start|stop`, `/api/scheduler/starlink/config|start|stop`
+- **Start Counting** master button on dashboard — launches camera, sensors, lights scheduler, and Starlink scheduler in one click with configurable capture and sensor intervals
+- **Stop All** button to shut down all services at once
+- `/api/system/start`, `/api/system/stop`, `/api/system/running` endpoints for full system control
+- Live service status indicators on dashboard showing which services are running
 - `lights.py`: new lights scheduler module — defaults to civil twilight at Quinhagak, AK (59.75°N, 161.92°W), supports manual `--on-time`/`--off-time` overrides, `--dry-run` mode, handles midnight sun and polar night
 - `salmoncv-lights` CLI entry point
 - `astral` dependency for solar position calculations

@@ -3,6 +3,36 @@
 {% block content %}
 <h1>Dashboard</h1>
 
+<div class="card start-card" id="startCard">
+  <div class="start-row">
+    <div>
+      <h2 id="sysLabel">System</h2>
+      <p id="sysStatus" class="muted">Checking...</p>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-green btn-lg" id="startAllBtn" onclick="startAll()">Start Counting</button>
+      <button class="btn btn-red btn-lg" id="stopAllBtn" onclick="stopAll()" style="display:none">Stop All</button>
+    </div>
+  </div>
+  <div id="startConfig" style="display:none">
+    <div class="form-row">
+      <label for="scInterval">Capture interval (sec):</label>
+      <input type="number" id="scInterval" value="3" min="1" max="3600" class="input-sm">
+    </div>
+    <div class="form-row">
+      <label for="scSensor">Sensor interval (sec):</label>
+      <input type="number" id="scSensor" value="30" min="2" max="3600" class="input-sm">
+    </div>
+  </div>
+  <div id="runningStatus" style="display:none">
+    <p><span class="label">Camera:</span> <span id="rCam" class="badge badge-off">--</span>
+       <span class="label" style="margin-left:1rem">Sensors:</span> <span id="rSens" class="badge badge-off">--</span>
+       <span class="label" style="margin-left:1rem">Lights:</span> <span id="rLights" class="badge badge-off">--</span>
+       <span class="label" style="margin-left:1rem">Starlink:</span> <span id="rSL" class="badge badge-off">--</span></p>
+  </div>
+  <p id="startMsg" class="msg"></p>
+</div>
+
 <div class="grid">
   <div class="card" id="cameraCard">
     <h2>Camera</h2>
@@ -101,6 +131,64 @@ function refreshStorage() {
   });
 }
 
+function startAll() {
+  var btn = document.getElementById('startAllBtn');
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+  var body = {
+    camera_interval: parseInt(document.getElementById('scInterval').value) || 3,
+    sensor_interval: parseInt(document.getElementById('scSensor').value) || 30
+  };
+  scv.post('/api/system/start', body, function(d) {
+    btn.disabled = false;
+    btn.textContent = 'Start Counting';
+    if (d.ok) {
+      var parts = [];
+      for (var k in d.results) {
+        parts.push(k + ': ' + (d.results[k].started ? 'started' : d.results[k].reason));
+      }
+      scv.text('startMsg', parts.join(', '));
+    } else {
+      scv.text('startMsg', 'Error: ' + d.error);
+    }
+    refreshRunning();
+    refreshDashboard();
+  });
+}
+
+function stopAll() {
+  var btn = document.getElementById('stopAllBtn');
+  btn.disabled = true;
+  btn.textContent = 'Stopping...';
+  scv.post('/api/system/stop', {}, function(d) {
+    btn.disabled = false;
+    btn.textContent = 'Stop All';
+    scv.text('startMsg', d.ok ? 'All services stopped' : 'Error');
+    refreshRunning();
+    refreshDashboard();
+  });
+}
+
+function refreshRunning() {
+  scv.get('/api/system/running', function(d) {
+    var anyRunning = d.any_running;
+    document.getElementById('startAllBtn').style.display = anyRunning ? 'none' : '';
+    document.getElementById('stopAllBtn').style.display = anyRunning ? '' : 'none';
+    document.getElementById('startConfig').style.display = anyRunning ? 'none' : 'block';
+    document.getElementById('runningStatus').style.display = anyRunning ? 'block' : 'none';
+
+    if (anyRunning) {
+      scv.text('sysStatus', d.all_running ? 'All services running' : 'Some services running');
+      scv.text('rCam', d.camera ? 'ON' : 'OFF'); scv.badge('rCam', d.camera);
+      scv.text('rSens', d.sensors ? 'ON' : 'OFF'); scv.badge('rSens', d.sensors);
+      scv.text('rLights', d.lights ? 'ON' : 'OFF'); scv.badge('rLights', d.lights);
+      scv.text('rSL', d.starlink ? 'ON' : 'OFF'); scv.badge('rSL', d.starlink);
+    } else {
+      scv.text('sysStatus', 'Ready to start');
+    }
+  });
+}
+
 function refreshDashboard() {
   scv.get('/api/camera/status', function(d) {
     scv.text('camStatus', d.running ? 'Running' : 'Stopped');
@@ -141,7 +229,9 @@ function refreshDashboard() {
   refreshStorage();
 }
 
+refreshRunning();
 refreshDashboard();
+setInterval(refreshRunning, 5000);
 setInterval(refreshDashboard, 5000);
 </script>
 {% endblock %}
