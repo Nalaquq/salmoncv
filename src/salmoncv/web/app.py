@@ -76,15 +76,25 @@ def create_app():
         CAPTURE_DIR.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         image_path = CAPTURE_DIR / f"capture_{timestamp}.jpg"
+        data = request.get_json(silent=True) or {}
+        shutter = data.get("shutter", 0)
+        gain = data.get("gain", 0)
+        awb = data.get("awb", "auto")
+        ev = data.get("ev", 0)
         try:
-            subprocess.run(
-                [
-                    "rpicam-still", "-o", str(image_path),
-                    "--width", "2028", "--height", "1520",
-                    "--timeout", "1000", "--nopreview",
-                ],
-                check=True, capture_output=True, timeout=15,
-            )
+            cmd = [
+                "rpicam-still", "-o", str(image_path),
+                "--width", "2028", "--height", "1520",
+                "--timeout", "1000", "--nopreview",
+                "--awb", str(awb),
+            ]
+            if shutter > 0:
+                cmd.extend(["--shutter", str(shutter)])
+            if gain > 0:
+                cmd.extend(["--gain", str(gain)])
+            if ev != 0:
+                cmd.extend(["--ev", str(ev)])
+            subprocess.run(cmd, check=True, capture_output=True, timeout=15)
             _log_request("/api/camera/capture", "capture", image_path.name)
             return jsonify({"ok": True, "filename": image_path.name})
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
@@ -105,21 +115,32 @@ def create_app():
         interval = data.get("interval", 3)
         width = data.get("width", 4056)
         height = data.get("height", 3040)
+        shutter = data.get("shutter", 0)
+        gain = data.get("gain", 0)
+        awb = data.get("awb", "auto")
+        ev = data.get("ev", 0)
 
         DATA_DIR.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            "salmoncv-camera", "--no-inference",
+            "--outdir", str(CAPTURE_DIR),
+            "--interval", str(interval),
+            "--width", str(width),
+            "--height", str(height),
+            "--awb", str(awb),
+        ]
+        if shutter > 0:
+            cmd.extend(["--shutter", str(shutter)])
+        if gain > 0:
+            cmd.extend(["--gain", str(gain)])
+        if ev != 0:
+            cmd.extend(["--ev", str(ev)])
         proc = subprocess.Popen(
-            [
-                "salmoncv-camera", "--no-inference",
-                "--outdir", str(CAPTURE_DIR),
-                "--interval", str(interval),
-                "--width", str(width),
-                "--height", str(height),
-            ],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         PID_FILE.write_text(str(proc.pid))
         _log_request("/api/camera/start", "start_timelapse",
-                      f"interval={interval} {width}x{height} pid={proc.pid}")
+                      f"interval={interval} {width}x{height} shutter={shutter} gain={gain} awb={awb} ev={ev} pid={proc.pid}")
         return jsonify({"ok": True, "pid": proc.pid})
 
     @app.route("/api/camera/stop", methods=["POST"])

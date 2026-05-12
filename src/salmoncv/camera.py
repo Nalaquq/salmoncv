@@ -21,18 +21,24 @@ def load_labels(path):
     return labels
 
 
-def capture_image(command, image_path, width, height):
-    subprocess.run(
-        [
-            command,
-            "-o", str(image_path),
-            "--width", str(width),
-            "--height", str(height),
-            "--timeout", "1000",
-            "--nopreview",
-        ],
-        check=True,
-    )
+def capture_image(command, image_path, width, height, shutter=0, gain=0,
+                   awb="auto", ev=0):
+    cmd = [
+        command,
+        "-o", str(image_path),
+        "--width", str(width),
+        "--height", str(height),
+        "--timeout", "1000",
+        "--nopreview",
+        "--awb", awb,
+    ]
+    if shutter > 0:
+        cmd.extend(["--shutter", str(shutter)])
+    if gain > 0:
+        cmd.extend(["--gain", str(gain)])
+    if ev != 0:
+        cmd.extend(["--ev", str(ev)])
+    subprocess.run(cmd, check=True)
 
 
 def try_read_sensor():
@@ -68,6 +74,24 @@ def main():
         "--no-inference",
         action="store_true",
         help="Capture images only, skip Coral TPU inference",
+    )
+    parser.add_argument(
+        "--shutter", type=int, default=0,
+        help="Shutter speed in microseconds (0 = auto)",
+    )
+    parser.add_argument(
+        "--gain", type=float, default=0,
+        help="Analogue gain / ISO (0 = auto)",
+    )
+    parser.add_argument(
+        "--awb", default="auto",
+        choices=["auto", "incandescent", "tungsten", "fluorescent",
+                 "indoor", "daylight", "cloudy", "custom"],
+        help="White balance mode (default: auto)",
+    )
+    parser.add_argument(
+        "--ev", type=float, default=0,
+        help="Exposure compensation in stops (default: 0)",
     )
     args = parser.parse_args()
 
@@ -143,6 +167,10 @@ def main():
                 image_path,
                 args.width,
                 args.height,
+                shutter=args.shutter,
+                gain=args.gain,
+                awb=args.awb,
+                ev=args.ev,
             )
 
             file_size_kb = round(image_path.stat().st_size / 1024, 1)

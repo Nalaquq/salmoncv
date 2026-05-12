@@ -241,3 +241,15 @@ Usage:
 **User**: Will it log what I'm doing on the app?
 
 **Claude**: Not currently. Added `web_log.csv` activity logging — every action taken through the dashboard (photo captures, time-lapse start/stop, lights/Starlink toggles) is recorded with timestamp, endpoint, action, detail, and client IP address. Log is saved at `~/salmoncv/data/web_log.csv` and downloadable from the Settings page.
+
+---
+
+**User**: How are we calculating shutter speed, ISO, white balance, and other low-level camera parameters?
+
+**Claude**: We weren't — `rpicam-still` was running full auto. Added manual camera controls with an auto/manual mode toggle:
+- **Shutter speed** (microseconds) — freeze fast-moving fish
+- **Gain / ISO** — control noise in low light
+- **White balance** — auto, daylight, cloudy, tungsten, fluorescent, incandescent, indoor
+- **Exposure compensation** — +/- stops to brighten or darken
+
+Available in both the CLI (`--shutter`, `--gain`, `--awb`, `--ev`) and the web dashboard Camera page. Default is auto mode — all parameters handled by the camera. Toggle to manual to set individual values. Settings apply to both single capture and time-lapse.

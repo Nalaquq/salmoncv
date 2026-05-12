@@ -22,6 +22,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `scripts/setup_hotspot.sh` — one-time Wi-Fi hotspot setup (SSID: SalmonCV, IP: 192.168.4.1)
 - `docs/hotspot-setup.md` — non-expert hotspot setup and troubleshooting guide
 - Web activity log (`~/salmoncv/data/web_log.csv`) — records every action taken through the dashboard: captures, time-lapse start/stop, power toggles, with timestamp and client IP
+- Camera manual controls: shutter speed, gain (ISO), white balance, and exposure compensation — available in both CLI (`--shutter`, `--gain`, `--awb`, `--ev`) and web dashboard (auto/manual mode toggle)
 - `lights.py`: new lights scheduler module — defaults to civil twilight at Quinhagak, AK (59.75°N, 161.92°W), supports manual `--on-time`/`--off-time` overrides, `--dry-run` mode, handles midnight sun and polar night
 - `salmoncv-lights` CLI entry point
 - `astral` dependency for solar position calculations

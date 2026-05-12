@@ -4,6 +4,47 @@
 <h1>Camera</h1>
 
 <div class="card">
+  <h2>Camera Settings</h2>
+  <div class="form-row">
+    <label>Mode:</label>
+    <div class="btn-group">
+      <button class="btn btn-sm btn-active" id="autoBtn" onclick="setMode('auto')">Auto</button>
+      <button class="btn btn-sm" id="manualBtn" onclick="setMode('manual')">Manual</button>
+    </div>
+  </div>
+
+  <div id="manualControls" style="display:none">
+    <div class="form-row">
+      <label for="shutter">Shutter (μs):</label>
+      <input type="number" id="shutter" value="0" min="0" max="200000000" class="input-sm">
+      <span class="muted">0 = auto</span>
+    </div>
+    <div class="form-row">
+      <label for="gain">Gain (ISO):</label>
+      <input type="number" id="gain" value="0" min="0" max="16" step="0.5" class="input-sm">
+      <span class="muted">0 = auto</span>
+    </div>
+    <div class="form-row">
+      <label for="awb">White balance:</label>
+      <select id="awb" class="input-sm">
+        <option value="auto">Auto</option>
+        <option value="daylight">Daylight</option>
+        <option value="cloudy">Cloudy</option>
+        <option value="tungsten">Tungsten</option>
+        <option value="fluorescent">Fluorescent</option>
+        <option value="incandescent">Incandescent</option>
+        <option value="indoor">Indoor</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="ev">Exposure comp:</label>
+      <input type="number" id="ev" value="0" min="-10" max="10" step="0.5" class="input-sm">
+      <span class="muted">stops (+bright / -dark)</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
   <h2>Quick Capture</h2>
   <p>Take a single photo and preview it here.</p>
   <button class="btn" id="captureBtn" onclick="capture()">Capture Photo</button>
@@ -42,13 +83,35 @@
 
 {% block scripts %}
 <script>
+var cameraMode = 'auto';
+
+function setMode(mode) {
+  cameraMode = mode;
+  document.getElementById('manualControls').style.display = mode === 'manual' ? 'block' : 'none';
+  document.getElementById('autoBtn').className = 'btn btn-sm' + (mode === 'auto' ? ' btn-active' : '');
+  document.getElementById('manualBtn').className = 'btn btn-sm' + (mode === 'manual' ? ' btn-active' : '');
+}
+
+function getCameraSettings() {
+  if (cameraMode === 'auto') {
+    return {shutter: 0, gain: 0, awb: 'auto', ev: 0};
+  }
+  return {
+    shutter: parseInt(document.getElementById('shutter').value) || 0,
+    gain: parseFloat(document.getElementById('gain').value) || 0,
+    awb: document.getElementById('awb').value,
+    ev: parseFloat(document.getElementById('ev').value) || 0
+  };
+}
+
 function capture() {
   var btn = document.getElementById('captureBtn');
   btn.disabled = true;
   btn.textContent = 'Capturing...';
   scv.text('captureMsg', '');
 
-  scv.post('/api/camera/capture', {}, function(d) {
+  var body = getCameraSettings();
+  scv.post('/api/camera/capture', body, function(d) {
     btn.disabled = false;
     btn.textContent = 'Capture Photo';
     if (d.ok) {
@@ -63,12 +126,12 @@ function capture() {
 }
 
 function startTL() {
-  var body = {
-    interval: parseInt(document.getElementById('tlInterval').value) || 3,
-    width: parseInt(document.getElementById('tlWidth').value) || 4056,
-    height: parseInt(document.getElementById('tlHeight').value) || 3040
-  };
-  scv.post('/api/camera/start', body, function(d) {
+  var settings = getCameraSettings();
+  settings.interval = parseInt(document.getElementById('tlInterval').value) || 3;
+  settings.width = parseInt(document.getElementById('tlWidth').value) || 4056;
+  settings.height = parseInt(document.getElementById('tlHeight').value) || 3040;
+
+  scv.post('/api/camera/start', settings, function(d) {
     scv.text('tlMsg', d.ok ? 'Started (PID ' + d.pid + ')' : 'Error: ' + d.error);
     refreshStatus();
   });
