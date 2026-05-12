@@ -11,6 +11,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - MkDocs documentation site with Material theme — 17 pages covering every component, setup guides, troubleshooting, and reference docs
 - GitHub Actions workflow (`.github/workflows/docs.yml`) for automatic deployment to GitHub Pages on push to main
+- GitHub Actions test workflow (`.github/workflows/tests.yml`) — runs 87 tests on push/PR across Python 3.9–3.12
+- `scripts/revert_hotspot.sh` — reverts all hotspot changes, restoring default networking
+- `setup_hotspot.sh` rewritten with `--dry-run`, `--safe`, and `--revert` flags for safe remote setup over SSH
+
+### Changed
+- Hardware-only dependencies (pycoral, tflite-runtime, RPi.bme280, smbus2) moved to `[project.optional-dependencies.pi]`; install with `pip install -e ".[pi]"` on the Pi
 - `docs_site/` directory with all documentation source files
 - `mkdocs.yml` configuration with Material theme, dark mode toggle, search, and code copy
 

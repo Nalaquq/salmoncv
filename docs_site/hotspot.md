@@ -18,19 +18,69 @@ The Pi creates a Wi-Fi access point called **SalmonCV** using `hostapd` and `dns
 
 ## Setup
 
-!!! warning "Requires physical access"
-    Run this with a monitor and keyboard connected to the Pi, in case something goes wrong with networking.
+### Step 1: Preview (dry run)
+
+See exactly what the script will change without touching anything:
 
 ```bash
 cd ~/salmoncv
-sudo bash scripts/setup_hotspot.sh
+sudo bash scripts/setup_hotspot.sh --dry-run
+```
+
+This prints every config file that would be created. Review it over SSH --- nothing is modified.
+
+### Step 2: Install with safety net
+
+```bash
+sudo bash scripts/setup_hotspot.sh --safe
+```
+
+This installs the hotspot **and** schedules an automatic revert in 5 minutes. If the hotspot breaks SSH, just wait --- networking restores itself. You can set a longer window:
+
+```bash
+sudo bash scripts/setup_hotspot.sh --safe 10    # 10-minute safety net
+```
+
+### Step 3: Reboot and verify
+
+```bash
 sudo reboot
+```
+
+After reboot, verify you can still SSH in:
+
+```bash
+ssh nalaquq@nalaquqpi.local
+```
+
+Then connect your phone to the **SalmonCV** Wi-Fi and open **http://192.168.4.1**.
+
+### Step 4: Cancel the revert
+
+Once everything works, cancel the scheduled revert so the hotspot stays permanent:
+
+```bash
+# If using 'at':
+sudo atrm $(atq | head -1 | awk '{print $1}')
+
+# If using systemd timer:
+sudo systemctl stop salmoncv-revert.timer
+sudo systemctl disable salmoncv-revert.timer
 ```
 
 ### Custom SSID and Password
 
 ```bash
-sudo bash scripts/setup_hotspot.sh "MyNetworkName" "mypassword"
+sudo bash scripts/setup_hotspot.sh --safe "MyNetworkName" "mypassword"
+```
+
+### Reverting
+
+If you ever want to remove the hotspot entirely:
+
+```bash
+sudo bash scripts/setup_hotspot.sh --revert
+sudo reboot
 ```
 
 ## Connecting

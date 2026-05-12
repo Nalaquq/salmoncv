@@ -13,7 +13,28 @@ The Pi creates a Wi-Fi network called **SalmonCV**. Connect your device to it, o
 
 ## Setup
 
-Run the setup script once:
+### Safe workflow (recommended over SSH)
+
+```bash
+cd ~/salmoncv
+
+# 1. Preview what will change (nothing is modified)
+sudo bash scripts/setup_hotspot.sh --dry-run
+
+# 2. Install with automatic revert in 5 minutes
+sudo bash scripts/setup_hotspot.sh --safe
+
+# 3. Reboot
+sudo reboot
+
+# 4. After reboot, verify SSH still works, then cancel the revert:
+#    sudo atrm $(atq | head -1 | awk '{print $1}')
+#    (or: sudo systemctl stop salmoncv-revert.timer)
+```
+
+If SSH breaks after reboot, just wait 5 minutes — networking reverts automatically.
+
+### Direct install (with monitor/keyboard available)
 
 ```bash
 cd ~/salmoncv
@@ -25,7 +46,14 @@ This installs and configures `hostapd` (access point) and `dnsmasq` (DHCP server
 ### Custom SSID and Password
 
 ```bash
-sudo bash scripts/setup_hotspot.sh "MyCustomSSID" "mypassword"
+sudo bash scripts/setup_hotspot.sh --safe "MyCustomSSID" "mypassword"
+```
+
+### Reverting
+
+```bash
+sudo bash scripts/setup_hotspot.sh --revert
+sudo reboot
 ```
 
 Default password is `salmon2026`.

@@ -373,3 +373,25 @@ Then the dashboard starts on every boot. The user can hit "Start Counting" from 
 - `.github/workflows/docs.yml` — GitHub Actions workflow that auto-builds and deploys to GitHub Pages on every push to main
 
 To enable: go to GitHub repo → Settings → Pages → Source = "GitHub Actions". After the next push, docs will be live at https://nalaquq.github.io/salmoncv/
+
+---
+
+**User**: It's time to write tests and debug.
+
+**Claude**: Created test suite with 87 tests across 6 files covering camera, lights, starlink, storage, watchdog, and the full Flask web app. Tests caught a real bug: `watchdog.get_max_night_hours()` returned >25h during midnight sun due to negative dusk-dawn delta. Fixed by clamping daylight hours to [0, 24].
+
+---
+
+**User**: Let's configure a GitHub Action workflow to run the tests on push.
+
+**Claude**: Created `.github/workflows/tests.yml` — runs tests on push and PR against main across Python 3.9–3.12. Moved hardware-only deps (pycoral, tflite-runtime, RPi.bme280, smbus2) to `[project.optional-dependencies.pi]` so CI installs cleanly. On the Pi: `pip install -e ".[pi]"`.
+
+---
+
+**User**: I need to work on the hotspot workflow but I'm afraid I'll screw up SSH.
+
+**Claude**: Rewrote `scripts/setup_hotspot.sh` with three safety modes:
+- `--dry-run`: shows every config file that would be created, changes nothing
+- `--safe [MINUTES]`: installs the hotspot AND schedules automatic revert (default 5 min). If SSH breaks, just wait and networking restores itself
+- `--revert`: undoes all hotspot changes immediately
+Created `scripts/revert_hotspot.sh` as the revert engine. Updated docs to recommend the safe workflow: dry-run → safe install → reboot → verify → cancel revert.
