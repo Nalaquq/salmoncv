@@ -235,3 +235,9 @@ Usage:
 - Development: `salmoncv-web --port 5000 --debug`
 - Production: `sudo salmoncv-web` (port 80)
 - With hotspot: `sudo bash scripts/setup_hotspot.sh && sudo reboot`, then connect phone to "SalmonCV" Wi-Fi and open `http://192.168.4.1`
+
+---
+
+**User**: Will it log what I'm doing on the app?
+
+**Claude**: Not currently. Added `web_log.csv` activity logging — every action taken through the dashboard (photo captures, time-lapse start/stop, lights/Starlink toggles) is recorded with timestamp, endpoint, action, detail, and client IP address. Log is saved at `~/salmoncv/data/web_log.csv` and downloadable from the Settings page.

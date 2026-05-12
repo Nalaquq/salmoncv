@@ -19,6 +19,25 @@ CAPTURE_DIR = Path.home() / "salmoncv" / "captures"
 DATA_DIR = Path.home() / "salmoncv" / "data"
 THUMB_DIR = DATA_DIR / "thumbs"
 PID_FILE = DATA_DIR / ".camera_pid"
+WEB_LOG = DATA_DIR / "web_log.csv"
+
+
+def _log_request(endpoint, action="", detail=""):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    write_header = not WEB_LOG.exists()
+    with open(WEB_LOG, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if write_header:
+            w.writerow(["timestamp", "method", "endpoint", "action",
+                         "detail", "remote_addr"])
+        w.writerow([
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            request.method,
+            endpoint,
+            action,
+            detail,
+            request.remote_addr,
+        ])
 
 
 def create_app():
@@ -66,8 +85,10 @@ def create_app():
                 ],
                 check=True, capture_output=True, timeout=15,
             )
+            _log_request("/api/camera/capture", "capture", image_path.name)
             return jsonify({"ok": True, "filename": image_path.name})
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            _log_request("/api/camera/capture", "capture_failed", str(e))
             return jsonify({"ok": False, "error": str(e)}), 500
 
     @app.route("/api/camera/start", methods=["POST"])
@@ -97,6 +118,8 @@ def create_app():
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         PID_FILE.write_text(str(proc.pid))
+        _log_request("/api/camera/start", "start_timelapse",
+                      f"interval={interval} {width}x{height} pid={proc.pid}")
         return jsonify({"ok": True, "pid": proc.pid})
 
     @app.route("/api/camera/stop", methods=["POST"])
@@ -109,6 +132,7 @@ def create_app():
         except OSError:
             pass
         PID_FILE.unlink(missing_ok=True)
+        _log_request("/api/camera/stop", "stop_timelapse")
         return jsonify({"ok": True})
 
     @app.route("/api/camera/status")
@@ -238,6 +262,7 @@ def create_app():
                 lights_off()
             else:
                 return jsonify({"ok": False, "error": "Invalid action"}), 400
+            _log_request("/api/power/lights", f"lights_{action}")
             return jsonify({"ok": True, "action": action})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
@@ -254,6 +279,7 @@ def create_app():
                 starlink_off()
             else:
                 return jsonify({"ok": False, "error": "Invalid action"}), 400
+            _log_request("/api/power/starlink", f"starlink_{action}")
             return jsonify({"ok": True, "action": action})
         except Exception as e:
             return jsonify({"ok": False, "error": str(e)}), 500
@@ -342,7 +368,7 @@ def create_app():
     def api_logs(logname):
         allowed = [
             "sensor_log.csv", "lights_log.csv", "starlink_log.csv",
-            "watchdog_log.csv", "capture_log.csv",
+            "watchdog_log.csv", "capture_log.csv", "web_log.csv",
         ]
         if logname not in allowed:
             return "Not found", 404
