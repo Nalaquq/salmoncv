@@ -45,7 +45,7 @@ ssh nalaquq@nalaquqpi.local
 cd ~/salmoncv
 source venv/bin/activate
 git pull
-pip install -e .
+pip install -e ".[pi]"
 ```
 
 Enable auto-start on boot:
@@ -54,10 +54,11 @@ Enable auto-start on boot:
 sudo bash scripts/install_service.sh
 ```
 
-Set up the Wi-Fi hotspot (requires monitor access):
+Set up the Wi-Fi hotspot (safe to run over SSH):
 
 ```bash
-sudo bash scripts/setup_hotspot.sh
+sudo bash scripts/setup_hotspot.sh --dry-run    # preview changes
+sudo bash scripts/setup_hotspot.sh --safe        # install with 5-min auto-revert
 sudo reboot
 ```
 
@@ -90,7 +91,7 @@ salmoncv/
 │   └── web/            Flask web dashboard
 ├── docs/               Setup guides and design documents
 ├── scripts/            Setup and install scripts
-├── tests/              Test suite (placeholder)
+├── tests/              Test suite (101 tests)
 ├── coral_test/         Coral TPU test model and data
 ├── data/               Sensor and capture logs (gitignored)
 └── pyproject.toml      Package configuration

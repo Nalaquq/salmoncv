@@ -16,10 +16,10 @@ source venv/bin/activate
 If this is your first time (or after pulling new code from GitHub), install the package:
 
 ```bash
-pip install -e .
+pip install -e ".[pi]"
 ```
 
-You only need to run `pip install -e .` once after each code update. The `source venv/bin/activate` step is needed every time you open a new terminal.
+You only need to run `pip install -e ".[pi]"` once after each code update. The `source venv/bin/activate` step is needed every time you open a new terminal.
 
 To get the latest code from GitHub:
 
@@ -27,7 +27,7 @@ To get the latest code from GitHub:
 cd ~/salmoncv
 git pull
 source venv/bin/activate
-pip install -e .
+pip install -e ".[pi]"
 ```
 
 ---
@@ -495,7 +495,7 @@ You need to activate the virtual environment and install the package:
 ```bash
 cd ~/salmoncv
 source venv/bin/activate
-pip install -e .
+pip install -e ".[pi]"
 ```
 
 ### Camera error: "Pipeline handler in use by another process"
@@ -530,7 +530,7 @@ Make sure you have the latest code:
 ```bash
 cd ~/salmoncv
 git pull
-pip install -e .
+pip install -e ".[pi]"
 ```
 
 Older versions used `gpiozero` which resets GPIO pins when the process exits. The current version uses `pinctrl` which keeps the state.
@@ -627,7 +627,7 @@ After pushing new code to GitHub:
 cd ~/salmoncv
 source venv/bin/activate
 git pull
-pip install -e .
+pip install -e ".[pi]"
 sudo systemctl restart salmoncv-web
 ```
 
@@ -648,7 +648,7 @@ sudo journalctl -u salmoncv-web -f      # live logs
 
 # === UPDATE SOFTWARE ===
 cd ~/salmoncv && source venv/bin/activate
-git pull && pip install -e .
+git pull && pip install -e ".[pi]"
 sudo systemctl restart salmoncv-web
 
 # === CLI COMMANDS (activate venv first) ===

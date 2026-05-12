@@ -105,7 +105,7 @@ With the Coral libraries installed, install the full package:
 
 ```bash
 cd ~/salmoncv
-pip install -e .
+pip install -e ".[pi]"
 ```
 
 ## Test Inference

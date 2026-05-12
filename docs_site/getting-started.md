@@ -18,7 +18,7 @@ ssh nalaquq@nalaquqpi.local
 cd ~/salmoncv
 source venv/bin/activate
 git pull
-pip install -e .
+pip install -e ".[pi]"
 ```
 
 ## Enable Auto-Start
@@ -68,7 +68,7 @@ After pushing new code to GitHub:
 cd ~/salmoncv
 source venv/bin/activate
 git pull
-pip install -e .
+pip install -e ".[pi]"
 sudo systemctl restart salmoncv-web
 ```
 

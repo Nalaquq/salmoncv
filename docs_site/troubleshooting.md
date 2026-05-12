@@ -18,6 +18,20 @@ Common issues and fixes for SalmonCV.
     - **Wi-Fi hotspot**: http://192.168.4.1
     - **Local network**: http://nalaquqpi.local
 
+### Start Counting doesn't work after boot
+
+If "Start Counting" works when you run `salmoncv-web` from the terminal but not after a reboot (via systemd), make sure you're running the latest version:
+
+```bash
+cd ~/salmoncv
+source venv/bin/activate
+git pull
+pip install -e ".[pi]"
+sudo systemctl restart salmoncv-web
+```
+
+This was a known bug (fixed) where subprocess commands weren't using full venv paths, so systemd couldn't find them.
+
 ### Dashboard is slow or unresponsive
 
 The dashboard uses threaded mode and AJAX timeouts to stay responsive. If pages freeze:
@@ -164,6 +178,6 @@ ls ~/salmoncv/data/*.csv
 cd ~/salmoncv
 source venv/bin/activate
 git pull
-pip install -e .
+pip install -e ".[pi]"
 sudo systemctl restart salmoncv-web
 ```
