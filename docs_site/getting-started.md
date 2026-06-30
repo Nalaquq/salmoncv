@@ -46,19 +46,19 @@ salmoncv-power lights-on
 salmoncv-power lights-off
 ```
 
-## Set Up Wi-Fi Hotspot (Optional)
+## Set Up Wi-Fi Hotspot (Recommended)
 
-!!! warning "Requires physical access"
-    Only do this with a monitor and keyboard connected to the Pi, in case something goes wrong with networking.
+The hotspot lets you connect directly to the Pi from any device --- no router or internet needed. This is the primary connection method for field deployment.
 
 ```bash
-sudo bash scripts/setup_hotspot.sh
+cd ~/salmoncv
+sudo bash scripts/setup_hotspot.sh --safe
 sudo reboot
 ```
 
 After reboot, connect your phone to the **SalmonCV** Wi-Fi network (password: `salmon2026`) and open **http://192.168.4.1**.
 
-See [Wi-Fi Hotspot](hotspot.md) for full details.
+See [Wi-Fi Hotspot](hotspot.md) for full details and [Networking](networking.md) for all connection methods.
 
 ## Update Software
 

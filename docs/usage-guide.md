@@ -636,10 +636,12 @@ sudo systemctl restart salmoncv-web
 ## Quick Reference Card
 
 ```
-# === CONNECT ===
-# Wi-Fi hotspot:  connect to "SalmonCV", open http://192.168.4.1
+# === CONNECT (see docs_site/networking.md for full guide) ===
+# Wi-Fi hotspot:  connect to "SalmonCV" (password: salmon2026), open http://192.168.4.1
 # Local network:  open http://nalaquqpi.local
 # SSH:            ssh nalaquq@nalaquqpi.local
+# Pi Connect:     https://connect.raspberrypi.com
+# Add Wi-Fi:      sudo nmcli device wifi connect "SSID" password "PASS"
 
 # === WEB SERVICE ===
 sudo systemctl status salmoncv-web      # check status

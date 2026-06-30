@@ -9,7 +9,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- MkDocs documentation site with Material theme — 17 pages covering every component, setup guides, troubleshooting, and reference docs
+- Networking guide (`docs_site/networking.md`) — comprehensive page covering all connection methods: SalmonCV hotspot, SSH, Raspberry Pi Connect, ethernet direct, HDMI + keyboard, SD card Wi-Fi editing via WSL. Includes Wi-Fi management with nmcli, SSH troubleshooting, and quick reference
+- Wi-Fi / Network troubleshooting section in `docs_site/troubleshooting.md` with escalation ladder linking to the networking guide
+- Raspberry Pi Connect setup instructions in `docs_site/pi-setup.md`
+- Cross-references to networking guide from hotspot, getting-started, troubleshooting, and usage-guide docs
+- MkDocs documentation site with Material theme — 18 pages covering every component, setup guides, troubleshooting, and reference docs
 - GitHub Actions workflow (`.github/workflows/docs.yml`) for automatic deployment to GitHub Pages on push to main
 - GitHub Actions test workflow (`.github/workflows/tests.yml`) — runs 87 tests on push/PR across Python 3.9–3.12
 - `scripts/revert_hotspot.sh` — reverts all hotspot changes, restoring default networking
@@ -18,6 +22,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Pi Power page (`/pi-power`) — shut down or reboot the Raspberry Pi from the dashboard with confirmation dialogs. Shows hostname, boot time, uptime, and CPU temperature.
 
 ### Fixed
+- **Hotspot setup script failed on Bookworm**: `setup_hotspot.sh` used VLAN netdev and `/etc/network/interfaces.d/` to create `ap0`, neither of which exist on Raspberry Pi OS Bookworm with NetworkManager. Script now creates `ap0` using `iw dev wlan0 interface add ap0 type __ap` with a persistent systemd service (`ap0.service`). Also auto-detects wlan0's channel and band so the hotspot shares the same radio channel (required for simultaneous AP + client on Pi 5). Config file directories are created if missing. Hotspot activates immediately without requiring a reboot.
+- **Hotspot revert script didn't clean up ap0.service**: `revert_hotspot.sh` now removes the `ap0.service` systemd unit and safety timer files.
 - **Start Counting broken after boot**: subprocess calls used bare command names (`salmoncv-camera`, etc.) which weren't on PATH when Flask ran via systemd. Now uses full venv binary paths resolved at runtime via `sys.executable`.
 - **Dashboard showed both relays as "on" when only one was energized**: `/api/system/running` only checked scheduler PID files, not actual relay state. Now returns separate `lights_relay` and `starlink_relay` fields that check the GPIO state files. Dashboard distinguishes "Sched" (scheduler running) from relay "ON/OFF".
 - **Dashboard showed relays as "on" after reboot when they were physically off**: Relay state files (`.lights_on_since`, `.starlink_on_since`) persisted across reboots but GPIO pins reset to LOW on power cycle. Flask app now clears stale state files on startup.

@@ -35,6 +35,23 @@ USAGE
     exit 0
 }
 
+# ---- Detect wlan0 channel for simultaneous AP+client ----
+detect_channel() {
+    local chan
+    chan=$(iw dev wlan0 info 2>/dev/null | awk '/channel/ {print $2; exit}')
+    if [ -z "$chan" ] || [ "$chan" = "0" ]; then
+        echo "7"
+        echo "g"
+    else
+        echo "$chan"
+        if [ "$chan" -ge 36 ]; then
+            echo "a"
+        else
+            echo "g"
+        fi
+    fi
+}
+
 # ---- Parse args ----
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
@@ -77,12 +94,16 @@ if [ ${#POSITIONAL[@]} -ge 2 ]; then
     PASS="${POSITIONAL[1]}"
 fi
 
+# Detect channel
+read -r CHANNEL HW_MODE <<< "$(detect_channel | tr '\n' ' ')"
+
 # ---- Header ----
 echo "=== SalmonCV Hotspot Setup ==="
 echo "SSID:     $SSID"
 echo "Password: $PASS"
 echo "AP IP:    $AP_IP"
 echo "DHCP:     $DHCP_START – $DHCP_END"
+echo "Channel:  $CHANNEL ($( [ "$HW_MODE" = "a" ] && echo "5 GHz" || echo "2.4 GHz" ))"
 if $DRY_RUN; then
     echo "Mode:     DRY RUN (no changes will be made)"
 fi
@@ -99,23 +120,32 @@ if ! $DRY_RUN && [ "$EUID" -ne 0 ]; then
 fi
 
 # ---- Show what will be created ----
-echo "--- /etc/systemd/network/10-ap0.netdev ---"
+echo "--- /etc/NetworkManager/conf.d/unmanage-ap0.conf ---"
 cat <<EOF
-[NetDev]
-Name=ap0
-Kind=vlan
-
-[VLAN]
-Id=1
+[keyfile]
+unmanaged-devices=interface-name:ap0
 EOF
 echo ""
 
-echo "--- /etc/network/interfaces.d/ap0 ---"
+echo "--- /etc/systemd/system/ap0.service ---"
 cat <<EOF
-auto ap0
-iface ap0 inet static
-    address $AP_IP
-    netmask 255.255.255.0
+[Unit]
+Description=Create ap0 virtual interface for SalmonCV hotspot
+Before=hostapd.service
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/sleep 3
+ExecStart=/sbin/iw dev wlan0 interface add ap0 type __ap
+ExecStart=/sbin/ip addr add $AP_IP/24 dev ap0
+ExecStart=/sbin/ip link set ap0 up
+ExecStop=/sbin/iw dev ap0 del
+
+[Install]
+WantedBy=multi-user.target
 EOF
 echo ""
 
@@ -124,8 +154,8 @@ cat <<EOF
 interface=ap0
 driver=nl80211
 ssid=$SSID
-hw_mode=g
-channel=7
+hw_mode=$HW_MODE
+channel=$CHANNEL
 wmm_enabled=0
 macaddr_acl=0
 auth_algs=1
@@ -174,7 +204,6 @@ if $SAFE_MODE; then
         echo "bash $REVERT_SCRIPT" | at "now + $SAFE_MINUTES minutes" 2>&1
         echo "Revert scheduled via 'at'. Job will run in $SAFE_MINUTES minutes."
     else
-        # Fallback: use a one-shot systemd timer
         cat > /etc/systemd/system/salmoncv-revert.service <<SVCEOF
 [Unit]
 Description=Revert SalmonCV hotspot (safety net)
@@ -219,31 +248,50 @@ apt-get install -y hostapd dnsmasq
 systemctl stop hostapd 2>/dev/null || true
 systemctl stop dnsmasq 2>/dev/null || true
 
+# ---- Tell NetworkManager to leave ap0 alone ----
+echo "Configuring NetworkManager to ignore ap0..."
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/unmanage-ap0.conf <<EOF
+[keyfile]
+unmanaged-devices=interface-name:ap0
+EOF
+
+systemctl restart NetworkManager
+
+# ---- Create ap0 interface via systemd service ----
+echo "Creating ap0 systemd service..."
+cat > /etc/systemd/system/ap0.service <<EOF
+[Unit]
+Description=Create ap0 virtual interface for SalmonCV hotspot
+Before=hostapd.service
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/sleep 3
+ExecStart=/sbin/iw dev wlan0 interface add ap0 type __ap
+ExecStart=/sbin/ip addr add $AP_IP/24 dev ap0
+ExecStart=/sbin/ip link set ap0 up
+ExecStop=/sbin/iw dev ap0 del
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable ap0.service
+
 # ---- Write configs ----
-echo "Creating virtual AP interface (ap0)..."
-cat > /etc/systemd/network/10-ap0.netdev <<EOF
-[NetDev]
-Name=ap0
-Kind=vlan
-
-[VLAN]
-Id=1
-EOF
-
-cat > /etc/network/interfaces.d/ap0 <<EOF
-auto ap0
-iface ap0 inet static
-    address $AP_IP
-    netmask 255.255.255.0
-EOF
-
 echo "Configuring hostapd..."
+mkdir -p /etc/hostapd
 cat > /etc/hostapd/hostapd.conf <<EOF
 interface=ap0
 driver=nl80211
 ssid=$SSID
-hw_mode=g
-channel=7
+hw_mode=$HW_MODE
+channel=$CHANNEL
 wmm_enabled=0
 macaddr_acl=0
 auth_algs=1
@@ -254,9 +302,12 @@ wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 EOF
 
-sed -i 's|^#DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+if [ -f /etc/default/hostapd ]; then
+    sed -i 's|^#DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+fi
 
 echo "Configuring dnsmasq..."
+mkdir -p /etc/dnsmasq.d
 cat > /etc/dnsmasq.d/salmoncv.conf <<EOF
 interface=ap0
 dhcp-range=$DHCP_START,$DHCP_END,255.255.255.0,24h
@@ -269,20 +320,30 @@ systemctl unmask hostapd
 systemctl enable hostapd
 systemctl enable dnsmasq
 
+# ---- Bring up ap0 now if it doesn't exist ----
+if ! ip link show ap0 &>/dev/null; then
+    echo "Creating ap0 interface..."
+    iw dev wlan0 interface add ap0 type __ap
+    ip addr add $AP_IP/24 dev ap0
+    ip link set ap0 up
+fi
+
+echo "Starting services..."
+systemctl start dnsmasq
+systemctl start hostapd
+
 echo ""
 echo "=== Setup complete ==="
 echo ""
-echo "Reboot the Pi to activate the hotspot:"
-echo "  sudo reboot"
+echo "The hotspot is active now. Test by connecting to: $SSID"
+echo "Dashboard: http://$AP_IP"
 echo ""
-echo "After reboot:"
-echo "  1. Connect your phone/tablet to Wi-Fi network: $SSID"
-echo "  2. Open a browser to: http://$AP_IP"
+echo "The hotspot will persist across reboots."
 echo ""
 
 if $SAFE_MODE; then
     echo ">>> REMINDER: You have $SAFE_MINUTES minutes to verify the hotspot works."
-    echo ">>> After rebooting and confirming SSH still works, cancel the revert:"
+    echo ">>> After confirming SSH still works, cancel the revert:"
     echo ""
     if command -v at &>/dev/null; then
         echo "    sudo atrm \$(atq | head -1 | awk '{print \$1}')"

@@ -22,6 +22,7 @@ For the complete changelog with full details, see [CHANGELOG.md](https://github.
 - Starlink scheduler (bandwidth-based upload windows with admin window)
 - Safety watchdog with relay duration limits
 - Wi-Fi hotspot setup script with `--dry-run`, `--safe`, and `--revert` modes
+- Networking guide --- all connection methods: hotspot, SSH, Pi Connect, ethernet, HDMI, SD card
 - systemd auto-start service
 - MkDocs documentation site with GitHub Pages deployment
 - GitHub Actions CI --- test suite runs on push/PR across Python 3.9--3.12
@@ -29,6 +30,7 @@ For the complete changelog with full details, see [CHANGELOG.md](https://github.
 
 ### Fixed
 
+- **Hotspot setup failed on Bookworm** --- script used VLAN netdev and ifupdown, which don't exist on Bookworm. Now uses `iw` to create `ap0` with a persistent systemd service, auto-detects wlan0's channel for simultaneous AP + client.
 - **Start Counting broken after boot** --- subprocess calls used bare command names not on PATH when running via systemd. Now uses full venv binary paths.
 - **Watchdog midnight sun bug** --- `get_max_night_hours()` could return >25h near midnight sun. Now clamps daylight to valid range.
 

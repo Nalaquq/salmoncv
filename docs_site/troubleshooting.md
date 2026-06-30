@@ -156,6 +156,43 @@ See [Storage Troubleshooting](storage.md#troubleshooting).
     salmoncv-starlink --on-time 14:00 --upload-time 30
     ```
 
+## Wi-Fi / Network
+
+For the full networking guide, see [Networking](networking.md).
+
+### Pi not showing up on your Wi-Fi
+
+If you can't reach the Pi via `ping nalaquqpi.local` or SSH, work through these options in order:
+
+1. **SalmonCV hotspot** --- connect your phone/tablet to SSID **SalmonCV** (password: `salmon2026`) and open **http://192.168.4.1**
+2. **Raspberry Pi Connect** --- go to [connect.raspberrypi.com](https://connect.raspberrypi.com) and open a remote terminal (Pi must be online)
+3. **Ethernet cable** --- plug directly from your PC to the Pi's ethernet port
+4. **HDMI + keyboard** --- connect a monitor and USB keyboard to the Pi
+5. **SD card edit** --- pull the microSD card and edit the Wi-Fi config from your PC
+
+Each method is documented in full at [Networking](networking.md).
+
+### Adding a new Wi-Fi network
+
+Once you can access the Pi:
+
+```bash
+sudo nmcli device wifi connect "NETWORK_NAME" password "PASSWORD"
+```
+
+NetworkManager remembers all saved networks and auto-connects to whichever is available.
+
+### SSH connection refused
+
+SSH may not be enabled. From the Pi (with monitor and keyboard):
+
+```bash
+sudo systemctl enable ssh
+sudo systemctl start ssh
+```
+
+Or enable it from the SD card by creating an empty file called `ssh` on the boot partition. See [Networking --- Enabling SSH](networking.md#enabling-ssh).
+
 ## General
 
 ### How to shut down or reboot the Pi

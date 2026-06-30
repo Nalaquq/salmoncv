@@ -61,7 +61,20 @@ git clone https://github.com/Nalaquq/salmoncv.git
 cd salmoncv
 ```
 
+## Set Up Raspberry Pi Connect
+
+Raspberry Pi Connect lets you access the Pi remotely from any browser, even when you're on a different network. This is strongly recommended as a fallback if you ever lose Wi-Fi access.
+
+```bash
+sudo apt install rpi-connect
+sudo loginctl enable-linger nalaquq
+rpi-connect signin
+```
+
+Follow the on-screen instructions to link the Pi to your Raspberry Pi account. You can then access it at [connect.raspberrypi.com](https://connect.raspberrypi.com).
+
 ## Next Steps
 
 - [Coral TPU Setup](coral-tpu-setup.md) --- install Python 3.9 and Coral libraries
 - [Getting Started](getting-started.md) --- install SalmonCV and test the hardware
+- [Networking](networking.md) --- manage Wi-Fi networks and connection methods

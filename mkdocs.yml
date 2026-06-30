@@ -41,6 +41,7 @@ nav:
     - Sensors: sensors.md
     - Power & Watchdog: power.md
   - Field Deployment:
+    - Networking: networking.md
     - Wi-Fi Hotspot: hotspot.md
     - Auto-Start on Boot: auto-start.md
     - Storage: storage.md
