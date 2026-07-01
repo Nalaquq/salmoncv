@@ -9,6 +9,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Live Focus stream on the Camera page — starts a low-res (640x480 @ 15fps) MJPEG feed from `rpicam-vid` so you can manually adjust lens focus from the browser
+
+### Fixed
+- Swap lights and Starlink relay GPIO pins (17 ↔ 27) to match physical wiring
+
+### Added
 - Networking guide (`docs_site/networking.md`) — comprehensive page covering all connection methods: SalmonCV hotspot, SSH, Raspberry Pi Connect, ethernet direct, HDMI + keyboard, SD card Wi-Fi editing via WSL. Includes Wi-Fi management with nmcli, SSH troubleshooting, and quick reference
 - Wi-Fi / Network troubleshooting section in `docs_site/troubleshooting.md` with escalation ladder linking to the networking guide
 - Raspberry Pi Connect setup instructions in `docs_site/pi-setup.md`

@@ -45,6 +45,19 @@
 </div>
 
 <div class="card">
+  <h2>Live Focus</h2>
+  <p>Stream a low-res live feed to manually adjust lens focus.</p>
+  <div class="btn-group">
+    <button class="btn btn-green" id="focusStartBtn" onclick="startFocus()">Start Stream</button>
+    <button class="btn btn-red" id="focusStopBtn" onclick="stopFocus()" disabled>Stop Stream</button>
+  </div>
+  <p id="focusMsg" class="msg"></p>
+  <div id="focusWrap" class="preview-wrap" style="display:none">
+    <img id="focusImg" class="preview-img" alt="Focus stream" style="max-width:640px">
+  </div>
+</div>
+
+<div class="card">
   <h2>Quick Capture</h2>
   <p>Take a single photo and preview it here.</p>
   <button class="btn" id="captureBtn" onclick="capture()">Capture Photo</button>
@@ -155,7 +168,45 @@ function refreshStatus() {
   });
 }
 
+function startFocus() {
+  document.getElementById('focusStartBtn').disabled = true;
+  scv.post('/api/camera/focus/start', {}, function(d) {
+    if (d.ok) {
+      document.getElementById('focusStopBtn').disabled = false;
+      document.getElementById('focusImg').src = '/api/camera/focus/stream?t=' + Date.now();
+      document.getElementById('focusWrap').style.display = 'block';
+      scv.text('focusMsg', 'Streaming — adjust lens focus now');
+    } else {
+      document.getElementById('focusStartBtn').disabled = false;
+      scv.text('focusMsg', 'Error: ' + d.error);
+    }
+  });
+}
+
+function stopFocus() {
+  scv.post('/api/camera/focus/stop', {}, function(d) {
+    document.getElementById('focusStartBtn').disabled = false;
+    document.getElementById('focusStopBtn').disabled = true;
+    document.getElementById('focusImg').src = '';
+    document.getElementById('focusWrap').style.display = 'none';
+    scv.text('focusMsg', d.ok ? '' : 'Error: ' + d.error);
+  });
+}
+
+function checkFocus() {
+  scv.get('/api/camera/focus/status', function(d) {
+    if (d.streaming) {
+      document.getElementById('focusStartBtn').disabled = true;
+      document.getElementById('focusStopBtn').disabled = false;
+      document.getElementById('focusImg').src = '/api/camera/focus/stream?t=' + Date.now();
+      document.getElementById('focusWrap').style.display = 'block';
+      scv.text('focusMsg', 'Streaming — adjust lens focus now');
+    }
+  });
+}
+
 refreshStatus();
+checkFocus();
 setInterval(refreshStatus, 5000);
 </script>
 {% endblock %}

@@ -8,12 +8,15 @@ import shutil
 import signal
 import subprocess
 import platform
+import threading
+import time
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 
 from flask import (
     Flask, render_template, jsonify, request, send_file, send_from_directory,
+    Response,
 )
 
 from salmoncv.storage import get_capture_dir, get_storage_info, set_storage_pref, DATA_DIR
@@ -57,6 +60,39 @@ def create_app():
         if sf.exists():
             sf.unlink()
 
+    _focus = {"proc": None, "frame": None}
+    _focus_lock = threading.Lock()
+
+    def _focus_running():
+        with _focus_lock:
+            p = _focus["proc"]
+            if p and p.poll() is None:
+                return True
+            _focus["proc"] = None
+            return False
+
+    def _read_focus_frames(proc):
+        buf = b''
+        try:
+            while proc.poll() is None:
+                chunk = proc.stdout.read(4096)
+                if not chunk:
+                    break
+                buf += chunk
+                while True:
+                    soi = buf.find(b'\xff\xd8')
+                    if soi == -1:
+                        buf = b''
+                        break
+                    eoi = buf.find(b'\xff\xd9', soi + 2)
+                    if eoi == -1:
+                        buf = buf[soi:]
+                        break
+                    _focus["frame"] = buf[soi:eoi + 2]
+                    buf = buf[eoi + 2:]
+        except Exception:
+            pass
+
     # --- Page routes ---
 
     @app.route("/")
@@ -95,6 +131,8 @@ def create_app():
 
     @app.route("/api/camera/capture", methods=["POST"])
     def api_camera_capture():
+        if _focus_running():
+            return jsonify({"ok": False, "error": "Stop focus stream first"}), 409
         capture_dir = get_capture_dir()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         image_path = capture_dir / f"capture_{timestamp}.jpg"
@@ -125,6 +163,8 @@ def create_app():
 
     @app.route("/api/camera/start", methods=["POST"])
     def api_camera_start():
+        if _focus_running():
+            return jsonify({"ok": False, "error": "Stop focus stream first"}), 409
         if PID_FILE.exists():
             pid = int(PID_FILE.read_text().strip())
             try:
@@ -206,6 +246,75 @@ def create_app():
             "last_capture": last_capture,
             "storage_drive": info["drive"],
         })
+
+    # --- Focus Stream API ---
+
+    @app.route("/api/camera/focus/start", methods=["POST"])
+    def api_focus_start():
+        cam_running, _ = _pid_running(PID_FILE)
+        if cam_running:
+            return jsonify({"ok": False, "error": "Stop timelapse first"}), 409
+
+        with _focus_lock:
+            if _focus["proc"] and _focus["proc"].poll() is None:
+                return jsonify({"ok": False, "error": "Already streaming"})
+
+            proc = subprocess.Popen(
+                ["rpicam-vid", "-t", "0",
+                 "--width", "640", "--height", "480",
+                 "--framerate", "15",
+                 "--codec", "mjpeg", "--nopreview", "-o", "-"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            )
+            _focus["proc"] = proc
+            _focus["frame"] = None
+            t = threading.Thread(target=_read_focus_frames, args=(proc,),
+                                 daemon=True)
+            t.start()
+
+        _log_request("/api/camera/focus/start", "focus_start")
+        return jsonify({"ok": True})
+
+    @app.route("/api/camera/focus/stop", methods=["POST"])
+    def api_focus_stop():
+        with _focus_lock:
+            proc = _focus["proc"]
+            if proc is None or proc.poll() is not None:
+                _focus["proc"] = None
+                return jsonify({"ok": False, "error": "Not streaming"})
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+            _focus["proc"] = None
+            _focus["frame"] = None
+
+        _log_request("/api/camera/focus/stop", "focus_stop")
+        return jsonify({"ok": True})
+
+    @app.route("/api/camera/focus/stream")
+    def api_focus_stream():
+        def generate():
+            prev = None
+            while True:
+                p = _focus["proc"]
+                if p is None or p.poll() is not None:
+                    break
+                frame = _focus["frame"]
+                if frame is not None and frame is not prev:
+                    prev = frame
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n'
+                           + frame + b'\r\n')
+                time.sleep(0.05)
+
+        return Response(generate(),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+
+    @app.route("/api/camera/focus/status")
+    def api_focus_status():
+        return jsonify({"streaming": _focus_running()})
 
     # --- Gallery API ---
 
@@ -636,7 +745,11 @@ def create_app():
 
         # Camera
         cam_running, _ = _pid_running(PID_FILE)
-        if not cam_running:
+        if _focus_running():
+            results["camera"] = {"started": False, "reason": "focus stream active"}
+        elif cam_running:
+            results["camera"] = {"started": False, "reason": "already running"}
+        else:
             cam_interval = data.get("camera_interval", 3)
             cam_width = data.get("camera_width", 4056)
             cam_height = data.get("camera_height", 3040)
@@ -650,8 +763,6 @@ def create_app():
             )
             PID_FILE.write_text(str(proc.pid))
             results["camera"] = {"started": True, "pid": proc.pid}
-        else:
-            results["camera"] = {"started": False, "reason": "already running"}
 
         # Sensors
         sens_running, _ = _pid_running(SENSORS_PID)
@@ -732,6 +843,13 @@ def create_app():
 
     @app.route("/api/system/stop", methods=["POST"])
     def api_system_stop():
+        with _focus_lock:
+            fp = _focus["proc"]
+            if fp and fp.poll() is None:
+                fp.terminate()
+            _focus["proc"] = None
+            _focus["frame"] = None
+
         results = {}
         results["camera"] = _stop_pid(PID_FILE)
         results["sensors"] = _stop_pid(SENSORS_PID)

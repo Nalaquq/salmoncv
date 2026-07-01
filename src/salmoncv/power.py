@@ -6,8 +6,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-LIGHTS_PIN = 17
-STARLINK_PIN = 27
+LIGHTS_PIN = 27
+STARLINK_PIN = 17
 
 STATE_DIR = Path.home() / "salmoncv" / "data"
 LIGHTS_STATE = STATE_DIR / ".lights_on_since"
