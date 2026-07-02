@@ -101,6 +101,8 @@ Forced shutoffs are logged to `~/salmoncv/data/watchdog_log.csv`:
 
 The [Power page](web-dashboard.md#power) provides browser-based control:
 
+![Power page](img/salmoncv_power.png)
+
 - Toggle lights and Starlink on/off
 - Start/stop lights and Starlink schedulers
 - Configure auto (civil twilight / bandwidth) or manual mode

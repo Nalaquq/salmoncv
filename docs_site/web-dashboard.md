@@ -15,6 +15,8 @@ The dashboard starts automatically on boot.
 
 ### Dashboard
 
+![Dashboard page](img/salmoncv_dashboard.png)
+
 The main landing page with:
 
 - **Start Counting** --- one button to launch camera, sensors, lights, and Starlink all at once
@@ -24,6 +26,8 @@ The main landing page with:
 - Storage selector (Auto / Samsung T9 / SD Card) with usage bars
 
 ### Camera
+
+![Camera page](img/salmoncv_camera.png)
 
 - **Quick Capture** --- take a single photo and preview it in the browser
 - **Time-Lapse** --- start/stop continuous capture with configurable interval and resolution
@@ -35,6 +39,8 @@ The main landing page with:
 
 ### Gallery
 
+![Gallery page](img/salmoncv_gallery.png)
+
 - Thumbnail grid of all captured images (newest first)
 - Click any thumbnail to view full-size in a lightbox
 - **Select mode** --- tap images to select, then delete individually or in bulk
@@ -43,11 +49,15 @@ The main landing page with:
 
 ### Sensors
 
+![Sensors page](img/salmoncv_sensors.png)
+
 - Live temperature (°F/°C), humidity (%), and pressure (hPa) --- updates every 5 seconds
 - Recent history table from sensor_log.csv
 - Download CSV button for the full sensor log
 
 ### Monitor
+
+![Monitor page](img/salmoncv_monitor.png)
 
 - **Power Draw** --- estimated watts per component (Pi, camera, lights, Starlink, SSD) with color-coded bar
 - **Environmental Charts** --- temperature, humidity, and pressure plotted over time with threshold lines
@@ -55,6 +65,8 @@ The main landing page with:
 - Configurable history range: last 50 to 1000 data points
 
 ### Power
+
+![Power page](img/salmoncv_power.png)
 
 - **Relay Control** --- toggle lights and Starlink on/off immediately
 - **Lights Scheduler** --- start/stop with auto (civil twilight) or manual on/off times
@@ -64,12 +76,16 @@ The main landing page with:
 
 ### Settings
 
+![Settings page](img/salmoncv_settings.png)
+
 - System info: hostname, uptime, CPU temperature
 - Storage: Samsung T9 and SD card usage with progress bars
 - Active storage drive and capture directory
 - Download all log files (sensor, lights, Starlink, watchdog, capture, web activity)
 
 ### Pi Power
+
+![Pi Power page](img/salmoncv_pipower.png)
 
 - **Status card** --- hostname, boot time, uptime, and CPU temperature
 - **Shut Down Pi** --- powers off the Raspberry Pi completely (requires pressing the physical power button to turn it back on)

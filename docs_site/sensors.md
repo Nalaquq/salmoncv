@@ -52,11 +52,15 @@ The [Sensors page](web-dashboard.md#sensors) shows:
 - Recent history table from sensor_log.csv
 - CSV download button
 
+![Sensors page](img/salmoncv_sensors.png)
+
 The [Monitor page](web-dashboard.md#monitor) shows:
 
 - Temperature, humidity, and pressure charts over time
 - Case health comparison (CPU temp vs. case temp/humidity)
 - Threshold lines for overheating and moisture warnings
+
+![Monitor page](img/salmoncv_monitor.png)
 
 ## Hardware Setup
 

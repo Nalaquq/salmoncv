@@ -14,6 +14,8 @@ SalmonCV captures time-lapse images, runs fish detection using a Google Coral Ed
 
 The dashboard starts automatically on boot. Hit **Start Counting** to launch camera, sensors, lights, and Starlink.
 
+![SalmonCV Dashboard](img/salmoncv_dashboard.png)
+
 ## Features
 
 - **Web Dashboard** --- Browser-based control panel accessible from phone or tablet over Wi-Fi

@@ -606,6 +606,15 @@ salmoncv-web --port 5000 --debug
 | **Power** | Toggle lights and Starlink on/off, start/stop light and Starlink schedulers with auto (civil twilight / bandwidth) or manual mode |
 | **Settings** | System info (hostname, uptime, CPU temp), Samsung T9 and SD card usage with progress bars, download all log files |
 
+![Dashboard](screenshots/salmoncv_dashboard.png)
+![Camera](screenshots/salmoncv_camera.png)
+![Gallery](screenshots/salmoncv_gallery.png)
+![Sensors](screenshots/salmoncv_sensors.png)
+![Monitor](screenshots/salmoncv_monitor.png)
+![Power](screenshots/salmoncv_power.png)
+![Settings](screenshots/salmoncv_settings.png)
+![Pi Power](screenshots/salmoncv_pipower.png)
+
 ### Wi-Fi hotspot (one-time setup)
 
 Requires physical access to the Pi (monitor + keyboard) in case something goes wrong:

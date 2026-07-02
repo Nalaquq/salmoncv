@@ -47,6 +47,8 @@ salmoncv-camera --no-inference --shutter 5000 --gain 4 --awb daylight
 
 The [Camera page](web-dashboard.md#camera) provides a toggle between Auto and Manual mode. In manual mode you can adjust shutter, gain, white balance, and exposure compensation from the browser --- no SSH needed.
 
+![Camera page](img/salmoncv_camera.png)
+
 ## With Coral TPU Inference
 
 To run fish detection on each captured image:

@@ -33,6 +33,8 @@ sudo bash scripts/install_service.sh
 
 Open a browser and go to **http://nalaquqpi.local**. You should see the SalmonCV dashboard.
 
+![SalmonCV Dashboard](img/salmoncv_dashboard.png)
+
 Test the camera:
 
 ```bash

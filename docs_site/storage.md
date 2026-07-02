@@ -31,6 +31,8 @@ If all checks pass, images go to the T9. Otherwise, they fall back to the SD car
 
 The [Dashboard](web-dashboard.md) has a storage card with a dropdown to switch between Auto, Samsung T9, and SD Card. The change takes effect immediately and persists across reboots.
 
+![Dashboard — storage selector](img/salmoncv_dashboard.png)
+
 ### From the CLI
 
 The preference is stored in `~/salmoncv/data/storage_config.json`. The camera reads this on every capture.

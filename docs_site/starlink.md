@@ -71,6 +71,8 @@ salmoncv-starlink --admin-time off
 
 The [Power page](web-dashboard.md#power) lets you:
 
+![Power page — Starlink controls](img/salmoncv_power.png)
+
 - Toggle Starlink on/off immediately
 - Start/stop the Starlink scheduler
 - Switch between Auto (bandwidth calculation) and Manual mode

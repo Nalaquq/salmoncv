@@ -101,6 +101,8 @@ salmoncv/
 
 Access from phone or tablet — no SSH required. The dashboard starts on boot via systemd.
 
+![SalmonCV Dashboard](docs/screenshots/salmoncv_dashboard.png)
+
 | Page | What it does |
 |------|-------------|
 | **Dashboard** | Start/stop all services, system overview, storage selector |

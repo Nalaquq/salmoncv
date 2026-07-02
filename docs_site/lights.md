@@ -62,6 +62,8 @@ salmoncv-lights --dry-run
 
 The [Power page](web-dashboard.md#power) lets you:
 
+![Power page — lights controls](img/salmoncv_power.png)
+
 - Toggle lights on/off immediately
 - Start/stop the lights scheduler
 - Switch between Auto (civil twilight) and Manual mode

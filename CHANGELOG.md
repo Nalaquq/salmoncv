@@ -9,6 +9,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `docs/screenshots/` directory with naming convention for app screenshots
+- App screenshots embedded across docs_site pages (web-dashboard, camera, sensors, power, lights, starlink, storage, getting-started, index), docs/usage-guide.md, and README.md
 - Live Focus stream on the Camera page — starts a low-res (640x480 @ 15fps) MJPEG feed from `rpicam-vid` so you can manually adjust lens focus from the browser
 
 ### Fixed
