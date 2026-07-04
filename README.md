@@ -4,6 +4,8 @@ SalmonCV is a solar-powered salmon counting system built on a Raspberry Pi 5. It
 
 Designed for unattended field deployment in Quinhagak, Alaska.
 
+![SalmonCV Dashboard](docs/screenshots/salmoncv_dashboard.png)
+
 ## What It Does
 
 - **Web Dashboard** — Browser-based control panel accessible from phone or tablet over Wi-Fi. Start/stop all services, adjust camera settings, view gallery, monitor power and environment — no SSH needed.
@@ -101,8 +103,6 @@ salmoncv/
 
 Access from phone or tablet — no SSH required. The dashboard starts on boot via systemd.
 
-![SalmonCV Dashboard](docs/screenshots/salmoncv_dashboard.png)
-
 | Page | What it does |
 |------|-------------|
 | **Dashboard** | Start/stop all services, system overview, storage selector |
@@ -112,6 +112,12 @@ Access from phone or tablet — no SSH required. The dashboard starts on boot vi
 | **Monitor** | Estimated power draw, temperature/humidity/pressure charts, case health |
 | **Power** | Toggle lights/Starlink, start/stop schedulers with auto or manual mode |
 | **Settings** | System info, disk usage (T9 + SD), log file downloads |
+
+| ![Camera page](docs/screenshots/salmoncv_camera.png) | ![Gallery page](docs/screenshots/salmoncv_gallery.png) |
+|:--:|:--:|
+| **Camera** — capture, time-lapse, manual exposure | **Gallery** — browse and manage images |
+| ![Monitor page](docs/screenshots/salmoncv_monitor.png) | ![Power page](docs/screenshots/salmoncv_power.png) |
+| **Monitor** — power draw and case health | **Power** — relays and schedulers |
 
 Setup guides: [hotspot](docs/hotspot-setup.md) | [auto-start](docs/usage-guide.md#web-dashboard)
 

@@ -67,3 +67,35 @@ class TestCaptureImage:
         cmd = mock_run.call_args[0][0]
         idx = cmd.index("--awb")
         assert cmd[idx + 1] == "daylight"
+
+    @patch("salmoncv.camera.subprocess.run")
+    def test_writes_to_tmp_then_renames(self, mock_run, tmp_path):
+        img = tmp_path / "test.jpg"
+
+        def fake_capture(cmd, **kwargs):
+            out = Path(cmd[cmd.index("-o") + 1])
+            out.write_bytes(b"\xff\xd8jpegdata")
+
+        mock_run.side_effect = fake_capture
+        capture_image("rpicam-still", img, 1920, 1080)
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-o") + 1] == str(img) + ".tmp"
+        assert img.exists()
+        assert not (tmp_path / "test.jpg.tmp").exists()
+
+    @patch("salmoncv.camera.subprocess.run")
+    def test_cleans_up_tmp_on_failure(self, mock_run, tmp_path):
+        import subprocess
+
+        img = tmp_path / "test.jpg"
+
+        def fail_capture(cmd, **kwargs):
+            out = Path(cmd[cmd.index("-o") + 1])
+            out.write_bytes(b"\xff\xd8partial")
+            raise subprocess.CalledProcessError(1, cmd)
+
+        mock_run.side_effect = fail_capture
+        with pytest.raises(subprocess.CalledProcessError):
+            capture_image("rpicam-still", img, 1920, 1080)
+        assert not img.exists()
+        assert not (tmp_path / "test.jpg.tmp").exists()

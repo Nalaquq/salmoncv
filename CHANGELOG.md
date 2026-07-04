@@ -11,9 +11,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - `docs/screenshots/` directory with naming convention for app screenshots
 - App screenshots embedded across docs_site pages (web-dashboard, camera, sensors, power, lights, starlink, storage, getting-started, index), docs/usage-guide.md, and README.md
+
+### Changed
+- Added gitignored `context/` directory for extra project context files; moved `prompt.txt` (running chat log) there and removed it from git tracking
+- Reworked screenshot integration for readability: README now opens with a dashboard hero image and shows a 2x2 grid of Camera/Gallery/Monitor/Power in the Web Dashboard section; usage-guide's Dashboard pages section rewritten from a table plus 8-image dump into per-page subsections, each with its own description and screenshot (including the previously missing Pi Power page); moved screenshots in lights, starlink, and power docs_site pages below their bullet lists so they no longer interrupt sentences; added the Settings screenshot to storage.md's Checking Storage section
+- Compressed `salmoncv_gallery.png` from 2.2 MB to 296 KB (resized 3777px → 1920px, quantized to 256 colors) in both `docs/screenshots/` and `docs_site/img/`
 - Live Focus stream on the Camera page — starts a low-res (640x480 @ 15fps) MJPEG feed from `rpicam-vid` so you can manually adjust lens focus from the browser
 
 ### Fixed
+- Broken thumbnails in the Gallery caused by partially written capture files. Captures (CLI time-lapse and web Quick Capture) now write to a `.tmp` name and rename to `.jpg` when complete, so the gallery never lists an in-progress file; interrupted captures no longer leave corrupt `.jpg` files behind. The thumbnail endpoint now serves an "unreadable image" SVG placeholder for undecodable files (instead of the corrupt original) so they can still be selected and deleted, and no longer caches partial thumbnails. Added 5 tests (118 total).
 - Swap lights and Starlink relay GPIO pins (17 ↔ 27) to match physical wiring
 
 ### Added

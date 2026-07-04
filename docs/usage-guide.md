@@ -596,24 +596,53 @@ salmoncv-web --port 5000 --debug
 
 ### Dashboard pages
 
-| Page | What it does |
-|------|-------------|
-| **Dashboard** | **Start Counting** button to launch all services at once. System overview, storage selector (T9/SD), live status badges. |
-| **Camera** | Single capture with preview, time-lapse start/stop, manual controls (shutter speed, gain/ISO, white balance, exposure compensation) |
-| **Gallery** | Browse captured images as thumbnails, click for full size, select and delete individual or all images |
-| **Sensors** | Live BME280 temperature, humidity, and pressure readings (updates every 5 seconds), history table, CSV download |
-| **Monitor** | Estimated power draw per component with color-coded bar, temperature/humidity/pressure charts, case health warnings |
-| **Power** | Toggle lights and Starlink on/off, start/stop light and Starlink schedulers with auto (civil twilight / bandwidth) or manual mode |
-| **Settings** | System info (hostname, uptime, CPU temp), Samsung T9 and SD card usage with progress bars, download all log files |
+#### Dashboard
+
+The main landing page. Hit **Start Counting** to launch camera, sensors, lights, and Starlink all at once, or **Stop All** to shut everything down. Live status badges show what's running, and the storage selector switches between the Samsung T9 and SD card.
 
 ![Dashboard](screenshots/salmoncv_dashboard.png)
-![Camera](screenshots/salmoncv_camera.png)
-![Gallery](screenshots/salmoncv_gallery.png)
-![Sensors](screenshots/salmoncv_sensors.png)
-![Monitor](screenshots/salmoncv_monitor.png)
-![Power](screenshots/salmoncv_power.png)
-![Settings](screenshots/salmoncv_settings.png)
-![Pi Power](screenshots/salmoncv_pipower.png)
+
+#### Camera
+
+Take a single photo with an instant preview, or start and stop a time-lapse. Switch to manual mode to adjust shutter speed, gain/ISO, white balance, and exposure compensation.
+
+![Camera page](screenshots/salmoncv_camera.png)
+
+#### Gallery
+
+Browse captured images as thumbnails, click any image for full size, and select images to delete individually or in bulk.
+
+![Gallery page](screenshots/salmoncv_gallery.png)
+
+#### Sensors
+
+Live BME280 temperature, humidity, and pressure readings (updates every 5 seconds), a recent history table, and a CSV download button.
+
+![Sensors page](screenshots/salmoncv_sensors.png)
+
+#### Monitor
+
+Estimated power draw per component with a color-coded bar, temperature/humidity/pressure charts, and case health warnings.
+
+![Monitor page](screenshots/salmoncv_monitor.png)
+
+#### Power
+
+Toggle lights and Starlink on and off, and start or stop the light and Starlink schedulers in auto (civil twilight / bandwidth) or manual mode.
+
+![Power page](screenshots/salmoncv_power.png)
+
+#### Settings
+
+System info (hostname, uptime, CPU temp), Samsung T9 and SD card usage with progress bars, and downloads for all log files.
+
+![Settings page](screenshots/salmoncv_settings.png)
+
+#### Pi Power
+
+Shut down or reboot the Raspberry Pi from the browser. Both actions ask for confirmation before running.
+
+![Pi Power page](screenshots/salmoncv_pipower.png)
 
 ### Wi-Fi hotspot (one-time setup)
 

@@ -52,6 +52,8 @@ Each capture is named `capture_YYYYMMDD_HHMMSS.jpg` with a corresponding `captur
 
 The [Settings page](web-dashboard.md#settings) shows usage bars for both the Samsung T9 and SD card, including total, used, and free space.
 
+![Settings page — storage usage](img/salmoncv_settings.png)
+
 ### CLI
 
 ```bash

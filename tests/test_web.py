@@ -116,6 +116,26 @@ class TestCameraAPI:
         r = client.post("/api/camera/capture", json={})
         assert r.status_code == 500
 
+    @patch("salmoncv.web.app.subprocess.run")
+    def test_capture_writes_tmp_then_renames(self, mock_run, client):
+        from pathlib import Path
+
+        def fake_capture(cmd, **kwargs):
+            out = Path(cmd[cmd.index("-o") + 1])
+            out.write_bytes(b"\xff\xd8jpegdata")
+
+        mock_run.side_effect = fake_capture
+        r = client.post("/api/camera/capture", json={})
+        data = r.get_json()
+        assert data["ok"] is True
+
+        cmd = mock_run.call_args[0][0]
+        assert cmd[cmd.index("-o") + 1].endswith(".jpg.tmp")
+
+        captures = storage.get_capture_dir()
+        assert (captures / data["filename"]).exists()
+        assert not list(captures.glob("*.tmp"))
+
     def test_camera_status(self, client):
         r = client.get("/api/camera/status")
         assert r.status_code == 200
@@ -226,6 +246,22 @@ class TestGalleryAPI:
                         json={"filenames": ["/etc/passwd"]})
         data = r.get_json()
         assert data["deleted"] == 0
+
+    def test_thumb_of_corrupt_image_returns_placeholder(self, client):
+        captures = storage.get_capture_dir()
+        (captures / "corrupt.jpg").write_bytes(b"\xff\xd8" + b"\x00" * 50)
+
+        r = client.get("/api/gallery/thumb/corrupt.jpg")
+        assert r.status_code == 200
+        assert r.mimetype == "image/svg+xml"
+        assert b"unreadable image" in r.data
+
+    def test_thumb_failure_leaves_no_cached_thumb(self, client):
+        captures = storage.get_capture_dir()
+        (captures / "corrupt.jpg").write_bytes(b"")
+
+        client.get("/api/gallery/thumb/corrupt.jpg")
+        assert not (web_module.THUMB_DIR / "corrupt.jpg").exists()
 
     def test_delete_blocks_backslash(self, client):
         r = client.post("/api/gallery/delete",

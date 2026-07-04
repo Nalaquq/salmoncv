@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import os
 import subprocess
 import time
 from datetime import datetime
@@ -23,9 +24,13 @@ def load_labels(path):
 
 def capture_image(command, image_path, width, height, shutter=0, gain=0,
                    awb="auto", ev=0):
+    # Capture to a .tmp name and rename when done, so the gallery
+    # (which globs *.jpg) never sees a partially written file.
+    image_path = Path(image_path)
+    tmp_path = image_path.with_name(image_path.name + ".tmp")
     cmd = [
         command,
-        "-o", str(image_path),
+        "-o", str(tmp_path),
         "--width", str(width),
         "--height", str(height),
         "--timeout", "1000",
@@ -38,7 +43,13 @@ def capture_image(command, image_path, width, height, shutter=0, gain=0,
         cmd.extend(["--gain", str(gain)])
     if ev != 0:
         cmd.extend(["--ev", str(ev)])
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    if tmp_path.exists():
+        os.replace(tmp_path, image_path)
 
 
 def try_read_sensor():

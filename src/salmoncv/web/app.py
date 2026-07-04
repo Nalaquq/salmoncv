@@ -24,6 +24,19 @@ from salmoncv.storage import get_capture_dir, get_storage_info, set_storage_pref
 VENV_BIN = Path(os.sys.executable).parent
 
 THUMB_DIR = DATA_DIR / "thumbs"
+
+# Served in place of a thumbnail when the source image can't be decoded
+# (e.g. truncated by an interrupted capture), so the gallery still shows
+# the file and it can be selected and deleted.
+THUMB_PLACEHOLDER_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">'
+    '<rect width="100%" height="100%" fill="#e9ecef"/>'
+    '<text x="150" y="95" text-anchor="middle" font-family="sans-serif" '
+    'font-size="15" fill="#868e96">unreadable image</text>'
+    '<text x="150" y="118" text-anchor="middle" font-family="sans-serif" '
+    'font-size="12" fill="#adb5bd">select to delete</text>'
+    "</svg>"
+)
 PID_FILE = DATA_DIR / ".camera_pid"
 LIGHTS_PID = DATA_DIR / ".lights_pid"
 STARLINK_PID = DATA_DIR / ".starlink_pid"
@@ -136,6 +149,9 @@ def create_app():
         capture_dir = get_capture_dir()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         image_path = capture_dir / f"capture_{timestamp}.jpg"
+        # Capture to a .tmp name and rename when done, so the gallery
+        # (which globs *.jpg) never sees a partially written file.
+        tmp_path = image_path.with_name(image_path.name + ".tmp")
         data = request.get_json(silent=True) or {}
         shutter = data.get("shutter", 0)
         gain = data.get("gain", 0)
@@ -143,7 +159,7 @@ def create_app():
         ev = data.get("ev", 0)
         try:
             cmd = [
-                "rpicam-still", "-o", str(image_path),
+                "rpicam-still", "-o", str(tmp_path),
                 "--width", "2028", "--height", "1520",
                 "--timeout", "1000", "--nopreview",
                 "--awb", str(awb),
@@ -155,9 +171,12 @@ def create_app():
             if ev != 0:
                 cmd.extend(["--ev", str(ev)])
             subprocess.run(cmd, check=True, capture_output=True, timeout=15)
+            if tmp_path.exists():
+                os.replace(tmp_path, image_path)
             _log_request("/api/camera/capture", "capture", image_path.name)
             return jsonify({"ok": True, "filename": image_path.name})
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            tmp_path.unlink(missing_ok=True)
             _log_request("/api/camera/capture", "capture_failed", str(e))
             return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -368,7 +387,10 @@ def create_app():
                 img.thumbnail((300, 300))
                 img.save(thumb_path, "JPEG", quality=70)
             except Exception:
-                return send_from_directory(str(capture_dir), filename)
+                thumb_path.unlink(missing_ok=True)
+                return app.response_class(
+                    THUMB_PLACEHOLDER_SVG, mimetype="image/svg+xml"
+                )
 
         return send_from_directory(str(THUMB_DIR), filename)
 
