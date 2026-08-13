@@ -76,6 +76,16 @@ Try manual camera settings:
     rpicam-still -o test.jpg
     ```
 
+### Timelapse shows "Running" but no new images appear
+
+The dashboard's "Running" badge only means the camera process is alive, not that it's succeeding — a stuck or misconfigured capture can keep the process running while every capture attempt fails. As of this fix, the process retries indefinitely instead of crashing, and the dashboard flags this case separately:
+
+- The Camera/Dashboard badge shows **Stalled** (instead of **Running**) once 5+ minutes have passed with no new image.
+- Check `~/salmoncv/data/camera_errors.log` for the specific error from each failed attempt.
+- Check `~/salmoncv/data/camera_stderr.log` for anything the process printed on startup.
+
+This is what caused a 12-day gap in captures (2026-07-30 to 2026-08-11): the T9 drive was unplugged while the camera process was running, the process crashed on its next write with no error logged anywhere, and the dashboard/sensors — which are separate processes — kept reporting normally the whole time. See the [Storage troubleshooting](storage.md#troubleshooting) section for the storage-switching side of this fix.
+
 ## Sensor Issues
 
 ### "Sensor not available" in the dashboard

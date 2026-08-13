@@ -31,10 +31,13 @@ var scv = {
     if (el) el.textContent = val;
   },
 
-  badge: function(id, on) {
+  // state: true/false for on/off, or the string 'warn' for a cautionary badge
+  // (e.g. process alive but not actually producing output).
+  badge: function(id, state) {
     var el = document.getElementById(id);
     if (el) {
-      el.className = 'badge ' + (on ? 'badge-on' : 'badge-off');
+      var cls = state === 'warn' ? 'badge-warn' : (state ? 'badge-on' : 'badge-off');
+      el.className = 'badge ' + cls;
     }
   }
 };

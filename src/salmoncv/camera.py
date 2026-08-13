@@ -5,8 +5,24 @@ import csv
 import os
 import subprocess
 import time
+import traceback
 from datetime import datetime
 from pathlib import Path
+
+
+def log_camera_error(message):
+    """Append a timestamped line to data/camera_errors.log on the SD card.
+
+    This always targets the SD card (never the T9) so a crash is still
+    visible even if the failure was the T9 disappearing mid-run.
+    """
+    from salmoncv.storage import DATA_DIR
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    error_log_path = DATA_DIR / "camera_errors.log"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(error_log_path, "a", encoding="utf-8") as f:
+        f.write(f"{timestamp} {message}\n")
 
 
 def load_labels(path):
@@ -70,6 +86,42 @@ def try_read_sensor():
         return {"temperature_c": "", "humidity": "", "pressure_hpa": ""}
 
 
+def open_capture_logs(outdir, run_inference):
+    """Open (append mode) the capture/inference CSV logs for outdir."""
+    capture_log_path = outdir / "capture_log.csv"
+    capture_fieldnames = [
+        "timestamp",
+        "image_path",
+        "file_size_kb",
+        "width",
+        "height",
+        "temperature_c",
+        "humidity",
+        "pressure_hpa",
+    ]
+
+    write_capture_header = (
+        not capture_log_path.exists() or capture_log_path.stat().st_size == 0
+    )
+    capture_log = open(capture_log_path, "a", newline="", encoding="utf-8")
+    capture_writer = csv.DictWriter(capture_log, fieldnames=capture_fieldnames)
+    if write_capture_header:
+        capture_writer.writeheader()
+
+    inference_log = None
+    inference_writer = None
+    if run_inference:
+        inference_log_path = outdir / "inference_log.csv"
+        inference_log = open(inference_log_path, "a", newline="", encoding="utf-8")
+        inference_writer = csv.writer(inference_log)
+        if inference_log_path.stat().st_size == 0:
+            inference_writer.writerow(
+                ["timestamp", "image_path", "rank", "class_id", "label", "score"]
+            )
+
+    return capture_log, capture_writer, inference_log, inference_writer
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default=None)
@@ -110,144 +162,135 @@ def main():
     if run_inference and not args.model:
         parser.error("--model is required unless --no-inference is set")
 
-    if args.outdir:
-        outdir = Path(args.outdir)
-        outdir.mkdir(parents=True, exist_ok=True)
-    else:
-        from salmoncv.storage import get_capture_dir, get_storage_info
-        outdir = get_capture_dir()
-        info = get_storage_info()
-        print(f"Storage: {info['drive']} → {outdir}")
+    # A pinned --outdir is used as-is for the whole run (e.g. manual/test
+    # captures into a specific folder). Otherwise the storage target (SD vs
+    # T9) is re-resolved every iteration below, so unplugging/replugging the
+    # T9 mid-run is picked up instead of crashing the process.
+    pinned_outdir = Path(args.outdir) if args.outdir else None
 
-    # --- Capture log (always written) ---
-    capture_log_path = outdir / "capture_log.csv"
-    capture_fieldnames = [
-        "timestamp",
-        "image_path",
-        "file_size_kb",
-        "width",
-        "height",
-        "temperature_c",
-        "humidity",
-        "pressure_hpa",
-    ]
+    def resolve_outdir():
+        if pinned_outdir:
+            pinned_outdir.mkdir(parents=True, exist_ok=True)
+            return pinned_outdir
+        from salmoncv.storage import get_capture_dir
+        return get_capture_dir()
 
-    write_capture_header = (
-        not capture_log_path.exists() or capture_log_path.stat().st_size == 0
+    outdir = resolve_outdir()
+    if not pinned_outdir:
+        from salmoncv.storage import get_storage_info
+        print(f"Storage: {get_storage_info()['drive']} → {outdir}")
+
+    capture_log, capture_writer, inference_log, inference_writer = (
+        open_capture_logs(outdir, run_inference)
     )
-    capture_log = open(capture_log_path, "a", newline="", encoding="utf-8")
-    capture_writer = csv.DictWriter(capture_log, fieldnames=capture_fieldnames)
-    if write_capture_header:
-        capture_writer.writeheader()
 
-    # --- Inference log (only with model) ---
+    # --- Inference model (only with model) ---
     interpreter = None
     model_size = None
     labels = {}
-    inference_writer = None
-    inference_log = None
 
     if run_inference:
-        from PIL import Image
-        from pycoral.adapters import classify, common
+        from pycoral.adapters import common
         from pycoral.utils.edgetpu import make_interpreter
 
         labels = load_labels(args.labels)
-        inference_log_path = outdir / "inference_log.csv"
-
         interpreter = make_interpreter(args.model)
         interpreter.allocate_tensors()
         model_size = common.input_size(interpreter)
 
-        inference_log = open(inference_log_path, "a", newline="", encoding="utf-8")
-        inference_writer = csv.writer(inference_log)
-
-        if inference_log_path.stat().st_size == 0:
-            inference_writer.writerow([
-                "timestamp",
-                "image_path",
-                "rank",
-                "class_id",
-                "label",
-                "score",
-            ])
-
     try:
         while True:
             start_time = time.time()
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            image_path = outdir / f"capture_{file_timestamp}.jpg"
-
-            capture_image(
-                args.camera_command,
-                image_path,
-                args.width,
-                args.height,
-                shutter=args.shutter,
-                gain=args.gain,
-                awb=args.awb,
-                ev=args.ev,
-            )
-
-            file_size_kb = round(image_path.stat().st_size / 1024, 1)
-            env = try_read_sensor()
-
-            capture_writer.writerow({
-                "timestamp": timestamp,
-                "image_path": image_path.name,
-                "file_size_kb": file_size_kb,
-                "width": args.width,
-                "height": args.height,
-                "temperature_c": env["temperature_c"],
-                "humidity": env["humidity"],
-                "pressure_hpa": env["pressure_hpa"],
-            })
-            capture_log.flush()
-
-            env_str = ""
-            if env["temperature_c"] != "":
-                env_str = (
-                    f"  {env['temperature_c']}°C"
-                    f"  {env['humidity']}%"
-                    f"  {env['pressure_hpa']}hPa"
-                )
-
-            print(f"{timestamp} | {image_path.name} | {file_size_kb}KB{env_str}")
-
-            if run_inference:
-                from PIL import Image
-                from pycoral.adapters import classify, common
-
-                image = Image.open(image_path).convert("RGB")
-                image = image.resize(model_size, Image.LANCZOS)
-
-                common.set_input(interpreter, image)
-                interpreter.invoke()
-
-                results = classify.get_classes(
-                    interpreter,
-                    top_k=args.top_k,
-                    score_threshold=args.threshold,
-                )
-
-                for rank, result in enumerate(results, start=1):
-                    label = labels.get(result.id, "unknown")
-                    print(
-                        f"  {rank}. id={result.id} "
-                        f"label={label} score={result.score:.4f}"
+            try:
+                new_outdir = resolve_outdir()
+                if new_outdir != outdir:
+                    print(f"Storage target changed: {outdir} -> {new_outdir}")
+                    capture_log.close()
+                    if inference_log:
+                        inference_log.close()
+                    outdir = new_outdir
+                    capture_log, capture_writer, inference_log, inference_writer = (
+                        open_capture_logs(outdir, run_inference)
                     )
 
-                    inference_writer.writerow([
-                        timestamp,
-                        str(image_path),
-                        rank,
-                        result.id,
-                        label,
-                        result.score,
-                    ])
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                image_path = outdir / f"capture_{file_timestamp}.jpg"
 
-                inference_log.flush()
+                capture_image(
+                    args.camera_command,
+                    image_path,
+                    args.width,
+                    args.height,
+                    shutter=args.shutter,
+                    gain=args.gain,
+                    awb=args.awb,
+                    ev=args.ev,
+                )
+
+                file_size_kb = round(image_path.stat().st_size / 1024, 1)
+                env = try_read_sensor()
+
+                capture_writer.writerow({
+                    "timestamp": timestamp,
+                    "image_path": image_path.name,
+                    "file_size_kb": file_size_kb,
+                    "width": args.width,
+                    "height": args.height,
+                    "temperature_c": env["temperature_c"],
+                    "humidity": env["humidity"],
+                    "pressure_hpa": env["pressure_hpa"],
+                })
+                capture_log.flush()
+
+                env_str = ""
+                if env["temperature_c"] != "":
+                    env_str = (
+                        f"  {env['temperature_c']}°C"
+                        f"  {env['humidity']}%"
+                        f"  {env['pressure_hpa']}hPa"
+                    )
+
+                print(f"{timestamp} | {image_path.name} | {file_size_kb}KB{env_str}")
+
+                if run_inference:
+                    from PIL import Image
+                    from pycoral.adapters import classify, common
+
+                    image = Image.open(image_path).convert("RGB")
+                    image = image.resize(model_size, Image.LANCZOS)
+
+                    common.set_input(interpreter, image)
+                    interpreter.invoke()
+
+                    results = classify.get_classes(
+                        interpreter,
+                        top_k=args.top_k,
+                        score_threshold=args.threshold,
+                    )
+
+                    for rank, result in enumerate(results, start=1):
+                        label = labels.get(result.id, "unknown")
+                        print(
+                            f"  {rank}. id={result.id} "
+                            f"label={label} score={result.score:.4f}"
+                        )
+
+                        inference_writer.writerow([
+                            timestamp,
+                            str(image_path),
+                            rank,
+                            result.id,
+                            label,
+                            result.score,
+                        ])
+
+                    inference_log.flush()
+
+            except Exception as e:
+                log_camera_error(f"capture iteration failed: {e!r}")
+                print(f"ERROR: capture iteration failed: {e!r}")
+                print(traceback.format_exc())
 
             elapsed = time.time() - start_time
             time.sleep(max(0, args.interval - elapsed))

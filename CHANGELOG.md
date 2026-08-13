@@ -19,6 +19,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Live Focus stream on the Camera page — starts a low-res (640x480 @ 15fps) MJPEG feed from `rpicam-vid` so you can manually adjust lens focus from the browser
 
 ### Fixed
+- **Camera silently stopped capturing for 12 days (2026-07-30 to 2026-08-11) and gave no indication anything was wrong**: the timelapse process resolved its output directory (SD card vs. Samsung T9) once at startup and never rechecked it. When the T9 drive was unplugged mid-run, the next write raised an uncaught exception that killed the process — and since it was launched with `stderr=DEVNULL`, the crash left no trace anywhere. The web dashboard and sensor logging are separate processes and kept running/reporting normally the whole time, so the system looked healthy on every remote check even though nothing was being captured.
+  - `salmoncv-camera` now re-resolves the storage target every loop iteration instead of once at startup, so unplugging/replugging the T9 is picked up live instead of crashing the process.
+  - The capture loop now catches per-iteration exceptions, logs them to `data/camera_errors.log`, and keeps running instead of exiting.
+  - `/api/camera/start` and `/api/system/start` no longer pin `--outdir` at launch (that's what froze the storage target), and now log the subprocess's stderr to `data/camera_stderr.log` instead of discarding it.
+  - `/api/camera/status` now reports `stale: true` when the process is alive but hasn't written a new image in 5+ minutes, and the Camera and Dashboard pages show a "Stalled" badge instead of a healthy-looking "Running" badge in that case.
 - Broken thumbnails in the Gallery caused by partially written capture files. Captures (CLI time-lapse and web Quick Capture) now write to a `.tmp` name and rename to `.jpg` when complete, so the gallery never lists an in-progress file; interrupted captures no longer leave corrupt `.jpg` files behind. The thumbnail endpoint now serves an "unreadable image" SVG placeholder for undecodable files (instead of the corrupt original) so they can still be selected and deleted, and no longer caches partial thumbnails. Added 5 tests (118 total).
 - Swap lights and Starlink relay GPIO pins (17 ↔ 27) to match physical wiring
 

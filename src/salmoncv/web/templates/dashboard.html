@@ -195,8 +195,13 @@ function refreshRunning() {
 
 function refreshDashboard() {
   scv.get('/api/camera/status', function(d) {
-    scv.text('camStatus', d.running ? 'Running' : 'Stopped');
-    scv.badge('camStatus', d.running);
+    if (d.running && d.stale) {
+      scv.text('camStatus', 'Stalled');
+      scv.badge('camStatus', 'warn');
+    } else {
+      scv.text('camStatus', d.running ? 'Running' : 'Stopped');
+      scv.badge('camStatus', d.running);
+    }
     scv.text('camToday', d.today_images);
     scv.text('camTotal', d.total_images);
     scv.text('camLast', d.last_capture || 'None');

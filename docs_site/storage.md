@@ -90,3 +90,11 @@ Delete the config file to reset to Auto:
 ```bash
 rm ~/salmoncv/data/storage_config.json
 ```
+
+**Camera looks "Running" on the dashboard but no new images are showing up**
+
+The camera process re-checks storage every capture and falls back to the SD card automatically if the T9 disappears, but if a capture fails for another reason (camera hardware issue, disk error, etc.) the process logs the error and keeps retrying rather than exiting. Check:
+
+- The Camera page badge: if it shows **Stalled** instead of **Running**, the process is alive but hasn't written a new image in 5+ minutes.
+- `~/salmoncv/data/camera_errors.log` for the specific error being hit on each retry.
+- `~/salmoncv/data/camera_stderr.log` for anything printed by the camera process itself (e.g. a startup failure).

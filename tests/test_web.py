@@ -33,6 +33,7 @@ def patch_all_paths(tmp_path, monkeypatch):
     # Patch web module paths
     monkeypatch.setattr(web_module, "DATA_DIR", data)
     monkeypatch.setattr(web_module, "THUMB_DIR", thumbs)
+    monkeypatch.setattr(web_module, "CAMERA_STDERR_LOG", data / "camera_stderr.log")
     monkeypatch.setattr(web_module, "PID_FILE", data / ".camera_pid")
     monkeypatch.setattr(web_module, "LIGHTS_PID", data / ".lights_pid")
     monkeypatch.setattr(web_module, "STARLINK_PID", data / ".starlink_pid")
@@ -144,6 +145,37 @@ class TestCameraAPI:
         assert data["running"] is False
         assert "total_images" in data
 
+    def test_camera_status_not_stale_when_stopped(self, client, tmp_path):
+        # No pid file at all -> running False, and staleness shouldn't be
+        # reported for a camera that was never asked to run.
+        r = client.get("/api/camera/status")
+        data = r.get_json()
+        assert data["stale"] is False
+
+    def test_camera_status_stale_when_running_with_old_image(self, client, tmp_path):
+        web_module.PID_FILE.write_text(str(os.getpid()))
+        captures = tmp_path / "captures"
+        img = captures / "capture_20260101_000000.jpg"
+        img.write_bytes(b"\xff\xd8\xff")
+        old_time = datetime.now().timestamp() - 3600
+        os.utime(img, (old_time, old_time))
+
+        r = client.get("/api/camera/status")
+        data = r.get_json()
+        assert data["running"] is True
+        assert data["stale"] is True
+
+    def test_camera_status_not_stale_when_running_with_fresh_image(self, client, tmp_path):
+        web_module.PID_FILE.write_text(str(os.getpid()))
+        captures = tmp_path / "captures"
+        img = captures / "capture_20260101_000000.jpg"
+        img.write_bytes(b"\xff\xd8\xff")
+
+        r = client.get("/api/camera/status")
+        data = r.get_json()
+        assert data["running"] is True
+        assert data["stale"] is False
+
     def test_stop_when_not_running(self, client):
         r = client.post("/api/camera/stop")
         data = r.get_json()
@@ -170,6 +202,33 @@ class TestCameraAPI:
         client.post("/api/camera/start", json={})
         cmd = mock_popen.call_args[0][0]
         assert cmd[0] == str(web_module.VENV_BIN / "salmoncv-camera")
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_start_timelapse_does_not_pin_outdir(self, mock_popen, client):
+        # Regression test: pinning --outdir at launch is what caused captures
+        # to silently stop when the T9 drive was unplugged mid-run, because
+        # the child process never re-checked which drive to use. Storage
+        # selection must be left to the camera process itself so it can
+        # react to the drive changing.
+        mock_proc = MagicMock()
+        mock_proc.pid = 12345
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/camera/start", json={})
+        cmd = mock_popen.call_args[0][0]
+        assert "--outdir" not in cmd
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_start_timelapse_does_not_discard_stderr(self, mock_popen, client):
+        # Regression test: a silently-discarded stderr is why the camera
+        # process's crash left no trace anywhere.
+        mock_proc = MagicMock()
+        mock_proc.pid = 12345
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/camera/start", json={})
+        stderr_arg = mock_popen.call_args.kwargs["stderr"]
+        assert stderr_arg is not subprocess.DEVNULL
 
     @patch("salmoncv.web.app.subprocess.Popen")
     def test_start_refuses_when_already_running(self, mock_popen, client, tmp_path):
@@ -500,6 +559,23 @@ class TestSystemAPI:
             assert cmd[0].startswith(venv_bin), (
                 f"Expected {cmd[0]} to start with {venv_bin}"
             )
+
+    @patch("salmoncv.web.app.subprocess.Popen")
+    def test_system_start_does_not_pin_camera_outdir(self, mock_popen, client):
+        # Same regression as /api/camera/start: /api/system/start is the
+        # endpoint that actually launched the camera process on 2026-07-30,
+        # and it froze --outdir at spawn time too.
+        mock_proc = MagicMock()
+        mock_proc.pid = 10099
+        mock_popen.return_value = mock_proc
+
+        client.post("/api/system/start", json={})
+        camera_call = next(
+            call for call in mock_popen.call_args_list
+            if "salmoncv-camera" in call[0][0][0]
+        )
+        assert "--outdir" not in camera_call[0][0]
+        assert camera_call.kwargs["stderr"] is not subprocess.DEVNULL
 
     @patch("salmoncv.web.app.subprocess.Popen")
     def test_system_start_saves_config(self, mock_popen, client):

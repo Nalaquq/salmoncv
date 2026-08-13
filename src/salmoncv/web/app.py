@@ -24,6 +24,8 @@ from salmoncv.storage import get_capture_dir, get_storage_info, set_storage_pref
 VENV_BIN = Path(os.sys.executable).parent
 
 THUMB_DIR = DATA_DIR / "thumbs"
+CAMERA_STDERR_LOG = DATA_DIR / "camera_stderr.log"
+CAMERA_STALE_AFTER_SEC = 300
 
 # Served in place of a thumbnail when the source image can't be decoded
 # (e.g. truncated by an interrupted capture), so the gallery still shows
@@ -204,7 +206,6 @@ def create_app():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         cmd = [
             str(VENV_BIN / "salmoncv-camera"), "--no-inference",
-            "--outdir", str(get_capture_dir()),
             "--interval", str(interval),
             "--width", str(width),
             "--height", str(height),
@@ -216,9 +217,10 @@ def create_app():
             cmd.extend(["--gain", str(gain)])
         if ev != 0:
             cmd.extend(["--ev", str(ev)])
-        proc = subprocess.Popen(
-            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
+        with open(CAMERA_STDERR_LOG, "a") as stderr_f:
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=stderr_f,
+            )
         PID_FILE.write_text(str(proc.pid))
         _log_request("/api/camera/start", "start_timelapse",
                       f"interval={interval} {width}x{height} shutter={shutter} gain={gain} awb={awb} ev={ev} pid={proc.pid}")
@@ -254,15 +256,28 @@ def create_app():
         today_count = sum(1 for img in images if today in img.name)
 
         last_capture = ""
+        last_capture_age_sec = None
         if images:
             last_capture = images[-1].name
+            last_capture_age_sec = round(time.time() - images[-1].stat().st_mtime)
+
+        # The process can stay alive while silently failing to write new
+        # images (e.g. the storage drive vanished). Flag that case instead
+        # of just reporting the PID as "running".
+        stale = (
+            running
+            and last_capture_age_sec is not None
+            and last_capture_age_sec > CAMERA_STALE_AFTER_SEC
+        )
 
         info = get_storage_info()
         return jsonify({
             "running": running,
+            "stale": stale,
             "total_images": len(images),
             "today_images": today_count,
             "last_capture": last_capture,
+            "last_capture_age_sec": last_capture_age_sec,
             "storage_drive": info["drive"],
         })
 
@@ -775,14 +790,14 @@ def create_app():
             cam_interval = data.get("camera_interval", 3)
             cam_width = data.get("camera_width", 4056)
             cam_height = data.get("camera_height", 3040)
-            proc = subprocess.Popen(
-                [str(VENV_BIN / "salmoncv-camera"), "--no-inference",
-                 "--outdir", str(get_capture_dir()),
-                 "--interval", str(cam_interval),
-                 "--width", str(cam_width),
-                 "--height", str(cam_height)],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
+            with open(CAMERA_STDERR_LOG, "a") as stderr_f:
+                proc = subprocess.Popen(
+                    [str(VENV_BIN / "salmoncv-camera"), "--no-inference",
+                     "--interval", str(cam_interval),
+                     "--width", str(cam_width),
+                     "--height", str(cam_height)],
+                    stdout=subprocess.DEVNULL, stderr=stderr_f,
+                )
             PID_FILE.write_text(str(proc.pid))
             results["camera"] = {"started": True, "pid": proc.pid}
 

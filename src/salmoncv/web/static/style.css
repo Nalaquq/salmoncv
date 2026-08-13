@@ -115,6 +115,7 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--muted); }
 }
 .badge-on { background: #dcfce7; color: var(--green); }
 .badge-off { background: #f3f4f6; color: var(--muted); }
+.badge-warn { background: #fef9c3; color: #a16207; }
 
 /* Buttons */
 .btn {

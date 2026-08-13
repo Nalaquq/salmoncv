@@ -159,8 +159,13 @@ function stopTL() {
 
 function refreshStatus() {
   scv.get('/api/camera/status', function(d) {
-    scv.text('tlState', d.running ? 'Running' : 'Stopped');
-    scv.badge('tlState', d.running);
+    if (d.running && d.stale) {
+      scv.text('tlState', 'Stalled (no new images)');
+      scv.badge('tlState', 'warn');
+    } else {
+      scv.text('tlState', d.running ? 'Running' : 'Stopped');
+      scv.badge('tlState', d.running);
+    }
     scv.text('tlToday', d.today_images);
     scv.text('tlTotal', d.total_images);
     document.getElementById('startBtn').disabled = d.running;
